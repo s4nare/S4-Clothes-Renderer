@@ -16,6 +16,38 @@ Génère des miniatures PNG transparentes des vêtements (freemode homme et femm
 - Galerie par catégorie, rendu en direct, reprise là où tu t'étais arrêté.
 - Rendu logiciel multi-cœur : plus de 100 images par seconde sur un CPU récent.
 
+## Captures
+
+| Véhicules | Armes |
+|---|---|
+| ![Véhicules](docs/vehicles.png) | ![Armes](docs/weapons.png) |
+| **Props** | **Peds** |
+| ![Props](docs/props.png) | ![Peds](docs/peds.png) |
+
+Rendu en direct : chaque image s'affiche dès qu'elle est écrite.
+
+![Rendu](docs/render.png)
+
+## Images produites
+
+Un PNG transparent par élément, une image par fichier :
+
+| `male/11/6.png` | `male/11/8.png` | `vehicles/adder.png` | `vehicles/champion.png` | `weapons/WEAPON_DOUBLEACTION.png` |
+|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/samples/jbib_006_a.png" width="140"> | <img src="docs/samples/jbib_008_a.png" width="140"> | <img src="docs/samples/adder.png" width="140"> | <img src="docs/samples/champion.png" width="140"> | <img src="docs/samples/WEAPON_DOUBLEACTION.png" width="140"> |
+| **`weapons/WEAPON_FLAREGUN.png`** | **`props/p_beefsplitter_s.png`** | **`props/p_bison_winch_s.png`** | **`peds/a_m_y_beach_01.png`** | **`peds/a_f_m_bevhills_01.png`** |
+| <img src="docs/samples/WEAPON_FLAREGUN.png" width="140"> | <img src="docs/samples/p_beefsplitter_s.png" width="140"> | <img src="docs/samples/p_bison_winch_s.png" width="140"> | <img src="docs/samples/a_m_y_beach_01.png" width="140"> | <img src="docs/samples/a_f_m_bevhills_01.png" width="140"> |
+
+```
+sortie/
+  male/11/42.png        vêtements (numéros du jeu)
+  female/4/17_2.png     variante de texture 2
+  vehicles/adder.png
+  weapons/WEAPON_PISTOL.png
+  props/prop_bin_01a.png
+  peds/a_m_y_beach_01.png
+```
+
 ## Installation
 
 1. Télécharge `S4ClothesRenderer.zip` dans les [Releases](../../releases) et décompresse-le.
@@ -62,6 +94,8 @@ Generates transparent PNG thumbnails of GTA V clothing (male and female freemode
 - First colour only or every texture variant (`42_0.png`, `42_1.png`…).
 - Per-category gallery, live progress, resumes where you left off.
 - Multi-core software renderer: over 100 images per second on a recent CPU.
+
+Screenshots and sample output: see [Captures](#captures) and [Images produites](#images-produites) above. One transparent PNG per item: `male/11/42.png`, `vehicles/adder.png`, `weapons/WEAPON_PISTOL.png`, `props/prop_bin_01a.png`, `peds/a_m_y_beach_01.png`.
 
 ### Install
 
