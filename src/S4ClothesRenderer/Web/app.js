@@ -48,16 +48,32 @@ function renderKinds() {
     document.body.classList.toggle('objects', isObjects());
     document.querySelectorAll('[data-kinds]').forEach((box) => {
         box.innerHTML = '';
+        box.classList.remove('open');
+        const current = document.createElement('button');
+        current.className = 'kind-current';
+        current.innerHTML = '<span></span>' + icon('down');
+        current.querySelector('span').textContent = t('kind.' + state.kind);
+        current.disabled = state.running && !!box.closest('.settings');
+        current.onclick = (e) => {
+            e.stopPropagation();
+            const open = !box.classList.contains('open');
+            document.querySelectorAll('[data-kinds].open').forEach((o) => o.classList.remove('open'));
+            box.classList.toggle('open', open);
+        };
+        const menu = document.createElement('div');
+        menu.className = 'kind-menu';
         for (const k of KINDS) {
             const b = document.createElement('button');
             b.textContent = t('kind.' + k);
             b.setAttribute('aria-checked', String(k === state.kind));
-            b.disabled = state.running && box.closest('.settings');
-            b.onclick = () => setKind(k);
-            box.append(b);
+            b.onclick = () => { box.classList.remove('open'); setKind(k); };
+            menu.append(b);
         }
+        box.append(current, menu);
     });
 }
+
+document.addEventListener('click', () => document.querySelectorAll('[data-kinds].open').forEach((o) => o.classList.remove('open')));
 
 function setKind(kind) {
     if (state.kind === kind) return;
@@ -138,7 +154,6 @@ function setSegment(group, value) {
 
 const catLabel = (key) => t('cat.' + key);
 const catSlot = (key) => (state.categories.find((c) => c.key === key) || {}).slot || '';
-const slotShort = (slot) => slot.startsWith('prop_') ? 'P' + slot.slice(5) : slot;
 
 function renderNav() {
     if (isObjects()) {
@@ -167,7 +182,7 @@ function renderNav() {
             const row = document.createElement('button');
             row.className = 'list-row' + (c.key === state.cat ? ' active' : '');
             row.innerHTML = '<span class="slot"></span><span class="name"></span><span class="cnt"></span>';
-            row.querySelector('.slot').textContent = slotShort(c.slot);
+            row.querySelector('.slot').innerHTML = icon('c-' + c.key);
             row.querySelector('.name').textContent = catLabel(c.key);
             const s = state.summary && state.summary[state.sex] && state.summary[state.sex][c.key];
             const cnt = row.querySelector('.cnt');
@@ -224,8 +239,8 @@ function fillTile(tile, item) {
         tile.dataset.url = item.url;
         tile.onclick = () => openLightbox(tile);
     } else {
-        tile.querySelector('.pic').innerHTML = '<div>' + icon('hourglass') + '<span></span></div>';
-        tile.querySelector('.pic span').textContent = t('gallery.todo');
+        tile.querySelector('.pic').innerHTML = '<img class="unknown" alt="" src="undefined.png">';
+        tile.querySelector('.pic img').title = t('gallery.todo');
         delete tile.dataset.url;
         tile.onclick = null;
     }
@@ -687,7 +702,24 @@ $('upd-go').onclick = () => {
     else if (u.state === 'ready') api('/api/restart');
 };
 
+const win = (action, edge) => window.chrome.webview.postMessage({ action, edge: edge || 0 });
+$('win-min').onclick = () => win('min');
+$('win-max').onclick = () => win('max');
+$('win-close').onclick = () => win('close');
+document.querySelectorAll('.edges i').forEach((el) => {
+    el.onmousedown = (e) => { if (e.button === 0) win('resize', +el.dataset.edge); };
+});
+document.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || e.target.closest('button, input, a, .run-chip, .edges, .modal, .lightbox')) return;
+    if (e.clientY > document.querySelector('.topbar').getBoundingClientRect().bottom) return;
+    win(e.detail === 2 ? 'max' : 'drag');
+});
+
 const handlers = {
+    win: (w) => {
+        document.body.classList.toggle('maximized', w.max);
+        $('win-max').querySelector('use').setAttribute('href', w.max ? '#i-restore' : '#i-max');
+    },
     update: setUpdate,
     progress: showProgress,
     image: onImage,

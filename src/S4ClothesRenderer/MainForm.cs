@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -19,6 +20,7 @@ public sealed class MainForm : Form
         MinimumSize = new Size(1100, 700);
         Size = new Size(1440, 900);
         StartPosition = FormStartPosition.CenterScreen;
+        FormBorderStyle = FormBorderStyle.None;
         Controls.Add(web);
         Load += async (_, _) => await Init();
         FormClosing += (_, _) => api.Runner.Stop();
@@ -49,8 +51,91 @@ public sealed class MainForm : Form
             e.Handled = true;
             if (e.Uri.StartsWith("http")) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri) { UseShellExecute = true });
         };
+        core.WebMessageReceived += OnWindowMessage;
+        core.NavigationCompleted += (_, _) => SendWindowState();
         core.Navigate(Host);
     }
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.Style |= 0x00040000 | 0x00020000 | 0x00010000 | 0x00080000;
+            cp.ClassStyle |= 0x00020000;
+            return cp;
+        }
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == 0x0083 && m.WParam != IntPtr.Zero)
+        {
+            m.Result = IntPtr.Zero;
+            return;
+        }
+        base.WndProc(ref m);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        var round = 2;
+        DwmSetWindowAttribute(Handle, 33, ref round, sizeof(int));
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        var screen = Screen.FromHandle(Handle);
+        var area = screen.WorkingArea;
+        MaximizedBounds = new Rectangle(area.X - screen.Bounds.X, area.Y - screen.Bounds.Y, area.Width, area.Height);
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        SendWindowState();
+    }
+
+    private void SendWindowState() => Send("win", new { max = WindowState == FormWindowState.Maximized });
+
+    private void OnWindowMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        using var doc = JsonDocument.Parse(e.WebMessageAsJson);
+        var root = doc.RootElement;
+        if (!root.TryGetProperty("action", out var action)) return;
+        switch (action.GetString())
+        {
+            case "drag":
+                ReleaseCapture();
+                SendMessage(Handle, 0xA1, 2, 0);
+                break;
+            case "resize":
+                ReleaseCapture();
+                SendMessage(Handle, 0xA1, root.GetProperty("edge").GetInt32(), 0);
+                break;
+            case "min":
+                WindowState = FormWindowState.Minimized;
+                break;
+            case "max":
+                OnLocationChanged(EventArgs.Empty);
+                WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
+                break;
+            case "close":
+                Close();
+                break;
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     private async void OnRequest(object sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
