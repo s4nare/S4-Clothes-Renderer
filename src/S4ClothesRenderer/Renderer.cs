@@ -153,7 +153,7 @@ public static class Renderer
                     sp[i * 3 + 2] = sz;
                 }
                 var alphaTest = mtex != null && mtex.UseAlpha && m.AlphaTest;
-                var hairMesh = mtex != null && (hair || (tex != null && m.Hair));
+                var hairMesh = mtex != null && (hair || (m.Hair && mtex.HairEncoded));
                 var idx = m.Indices;
                 for (var t = 0; t + 2 < idx.Length; t += 3)
                 {

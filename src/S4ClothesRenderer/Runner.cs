@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -28,6 +29,7 @@ public sealed class JobOptions
     public string Colors { get; set; } = "first";
     public int Size { get; set; } = 512;
     public bool Force { get; set; }
+    public bool Head { get; set; }
     public List<string> Sexes { get; set; } = [];
     public List<string> Cats { get; set; } = [];
     public string Sex { get; set; } = "";
@@ -60,6 +62,7 @@ public sealed class Runner
     private (string Key, List<ClothingItem> Items) lastScan;
     private readonly object objectLock = new();
     private (string Key, Library Lib, List<ObjectItem> Items) lastObjects;
+    private readonly ConcurrentDictionary<string, List<Mesh>> heads = new();
 
     public GameArchive Game { get; private set; }
     public string GameStatus { get; private set; } = "";
@@ -345,11 +348,29 @@ public sealed class Runner
         for (var i = 0; i < todo.Count; i++) todo[i].Seq = i;
         var run = Run = new RunState { Total = todo.Count, Skipped = jobs.Count - todo.Count };
         if (unknown > 0) send("log", new { key = o.Naming == "game" ? "unknown_skipped" : "unknown_sorted", n = unknown });
-        Task.Run(() => Execute(run, todo));
+        Task.Run(() => Execute(run, todo, o.Head));
         return new { total = todo.Count, skipped = run.Skipped };
     }
 
-    private void Execute(RunState run, List<Job> todo)
+    private List<Mesh> Head(string sex)
+    {
+        var game = Game;
+        if (game == null || GameLoading) return [];
+        return heads.GetOrAdd(game.Folder + "|" + sex, _ =>
+        {
+            var prefix = sex == "male" ? "mp_m_freemode_01^" : "mp_f_freemode_01^";
+            var model = game.Files.FirstOrDefault(f => f.FullName == prefix + "head_000_r.ydd").File;
+            var texture = game.Files.FirstOrDefault(f => f.FullName.StartsWith(prefix + "head_diff_000_a", StringComparison.Ordinal)).File;
+            if (model == null || texture == null) return [];
+            var tex = Assets3D.ReadTexture(texture.LoadTextures(), MaxTexture);
+            if (tex == null) return [];
+            var meshes = Assets3D.ReadMeshes(model.LoadDrawables());
+            foreach (var m in meshes) m.Tex = tex;
+            return meshes;
+        });
+    }
+
+    private void Execute(RunState run, List<Job> todo, bool withHead)
     {
         var lastProgress = Stopwatch.StartNew();
         var options = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
@@ -378,7 +399,10 @@ public sealed class Runner
                     tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), MaxTexture) : null;
                     meshes = Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables());
                     if (meshes.Count == 0) throw new InvalidDataException("no mesh");
-                    rgba = Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair");
+                    var head = withHead && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
+                    rgba = head.Count > 0
+                        ? Renderer.Render(meshes.Sum(m => m.Indices.Length / 3) <= 4 ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false)
+                        : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair");
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(job.Out));
                 File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));

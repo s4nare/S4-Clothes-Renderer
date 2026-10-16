@@ -132,6 +132,7 @@ public sealed class Api
         settings.Colors = next.Colors == "all" ? "all" : "first";
         settings.Size = next.Size;
         settings.Force = next.Force;
+        settings.Head = next.Head;
         settings.Lang = next.Lang ?? "";
         settings.Save();
         SyncRefs();

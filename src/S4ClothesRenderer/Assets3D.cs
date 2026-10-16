@@ -39,6 +39,21 @@ public sealed class Tex
     public int Height;
     public byte[] Rgba;
     public bool UseAlpha;
+    private bool? hairEncoded;
+
+    public bool HairEncoded => hairEncoded ??= GreenWithoutBlue();
+
+    private bool GreenWithoutBlue()
+    {
+        long g = 0, b = 0;
+        for (var i = 0; i < Rgba.Length; i += 4)
+        {
+            if (Rgba[i + 3] < 90) continue;
+            g += Rgba[i + 1];
+            b += Rgba[i + 2];
+        }
+        return g > 0 && b * 4 < g;
+    }
 }
 
 public static class Assets3D

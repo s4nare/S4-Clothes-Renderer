@@ -12,6 +12,7 @@ public sealed class Settings
     public string Colors { get; set; } = "first";
     public int Size { get; set; } = 512;
     public bool Force { get; set; }
+    public bool Head { get; set; }
     public string Lang { get; set; } = "";
     public string ResourcePath { get; set; } = "";
     public string SeenVersion { get; set; } = "";

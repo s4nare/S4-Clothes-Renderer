@@ -12,7 +12,7 @@ const state = {
     sex: 'male', cat: 'jbib', filter: 'all', items: [], refs: false,
     useGame: true, gamePath: '', game: null,
     kind: 'clothes', objCounts: null, groups: null, groupByKind: {}, groupsPicked: {},
-    opts: { colors: 'first', naming: 'cat', size: '512', force: 'false' },
+    opts: { colors: 'first', naming: 'cat', size: '512', force: 'false', head: 'false' },
 };
 
 const ui = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -23,6 +23,7 @@ function options() {
         sexes: [...document.querySelectorAll('[name=sex]:checked')].map((e) => e.value),
         cats: [...document.querySelectorAll('[name=pick]:checked')].map((e) => e.value),
         colors: state.opts.colors, naming: state.opts.naming, size: +state.opts.size, force: state.opts.force === 'true',
+        head: state.opts.head === 'true',
         kind: state.kind, groups: [...document.querySelectorAll('[name=group]:checked')].map((e) => e.value),
     };
 }
@@ -103,7 +104,7 @@ function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => api('/api/settings', {
         useGame: state.useGame, gamePath: state.gamePath, folders: state.folders, out: o.out,
-        naming: o.naming, colors: o.colors, size: o.size, force: o.force, lang: LANG,
+        naming: o.naming, colors: o.colors, size: o.size, force: o.force, head: o.head, lang: LANG,
     }).then((r) => setRefs(!!r.refs)), 200);
 }
 
@@ -760,7 +761,7 @@ fetch('/api/state').then((r) => r.json()).then((st) => {
     state.gamePath = s.gamePath || '';
     state.game = st.game;
     $('out').value = s.out || '';
-    state.opts = { colors: s.colors, naming: s.naming, size: String(s.size), force: String(s.force) };
+    state.opts = { colors: s.colors, naming: s.naming, size: String(s.size), force: String(s.force), head: String(s.head) };
     if (ui) {
         state.sex = ui.sex || 'male';
         state.cat = ui.cat || 'jbib';
