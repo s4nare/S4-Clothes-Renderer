@@ -89,14 +89,54 @@ public static class Assets3D
 
     private static bool Is(HashSet<uint> set, ShaderFX shader) => shader != null && (set.Contains(shader.Name.Hash) || set.Contains(shader.FileName.Hash));
 
-    public static List<Mesh> ReadMeshes(YddFile ydd)
+    public static List<Mesh> ReadMeshes(YddFile ydd, Dictionary<int, Matrix> pose = null)
     {
         var meshes = new List<Mesh>();
-        foreach (var drawable in ydd.Drawables ?? ydd.DrawableDict?.Drawables?.data_items ?? []) AddDrawable(meshes, drawable, null, false);
+        foreach (var drawable in ydd.Drawables ?? ydd.DrawableDict?.Drawables?.data_items ?? []) AddDrawable(meshes, drawable, null, false, null, pose);
         return meshes;
     }
 
-    public static void AddDrawable(List<Mesh> meshes, DrawableBase drawable, Matrix? fixedTransform, bool useBones, TextureDictionary embedded = null)
+    private const float ArmSpread = 0.2f;
+
+    public static Dictionary<int, Matrix> ArmsDown(Skeleton skeleton)
+    {
+        var bones = skeleton?.Bones?.Items;
+        if (bones == null) return null;
+        var world = new Matrix[bones.Length];
+        for (var i = 0; i < bones.Length; i++)
+        {
+            var local = Matrix.RotationQuaternion(bones[i].Rotation) * Matrix.Translation(bones[i].Translation);
+            var parent = bones[i].ParentIndex;
+            world[i] = parent >= 0 && parent < i ? local * world[parent] : local;
+        }
+        var pose = new Dictionary<int, Matrix>();
+        foreach (var (upperTag, foreTag) in new[] { (45509, 61163), (40269, 28252) })
+        {
+            var upper = Array.FindIndex(bones, b => b.Tag == upperTag);
+            var fore = Array.FindIndex(bones, b => b.Tag == foreTag);
+            if (upper < 0 || fore < 0) continue;
+            var shoulder = world[upper].TranslationVector;
+            var arm = world[fore].TranslationVector - shoulder;
+            var angle = MathF.Atan2(MathF.Sign(arm.X) * MathF.Sin(ArmSpread), -MathF.Cos(ArmSpread)) - MathF.Atan2(arm.X, arm.Z);
+            var rotation = Matrix.Translation(-shoulder) * Matrix.RotationY(angle) * Matrix.Translation(shoulder);
+            for (var i = 0; i < bones.Length; i++)
+            {
+                if (Descends(bones, i, upper)) pose[i] = rotation;
+            }
+        }
+        return pose;
+    }
+
+    private static bool Descends(Bone[] bones, int bone, int ancestor)
+    {
+        for (var i = bone; i >= 0 && i < bones.Length; i = bones[i].ParentIndex)
+        {
+            if (i == ancestor) return true;
+        }
+        return false;
+    }
+
+    public static void AddDrawable(List<Mesh> meshes, DrawableBase drawable, Matrix? fixedTransform, bool useBones, TextureDictionary embedded = null, Dictionary<int, Matrix> pose = null)
     {
         var models = drawable?.DrawableModels?.High ?? drawable?.DrawableModels?.Med ?? drawable?.DrawableModels?.Low;
         if (models == null) return;
@@ -109,13 +149,13 @@ public static class Assets3D
             if (transform == null && useBones && model.HasSkin == 0 && bones != null && model.BoneIndex < bones.Length) transform = bones[model.BoneIndex].AnimTransform;
             foreach (var geometry in model.Geometries)
             {
-                var mesh = ReadGeometry(geometry, transform, embedded);
+                var mesh = ReadGeometry(geometry, transform, embedded, pose);
                 if (mesh != null) meshes.Add(mesh);
             }
         }
     }
 
-    private static Mesh ReadGeometry(DrawableGeometry geometry, Matrix? transform, TextureDictionary embedded)
+    private static Mesh ReadGeometry(DrawableGeometry geometry, Matrix? transform, TextureDictionary embedded, Dictionary<int, Matrix> pose)
     {
         if (Is(HiddenShaders, geometry.Shader)) return null;
         var data = geometry.VertexData;
@@ -167,8 +207,35 @@ public static class Assets3D
             }
         }
         for (var i = 0; i < indices.Length; i++) mesh.Indices[i] = indices[i];
+        if (pose is { Count: > 0 } && Has(1) && Has(2)) Skin(mesh, data, geometry.BoneIds, pose);
         if (transform is { } m && !m.IsIdentity) Transform(mesh, m);
         return mesh;
+    }
+
+    private static void Skin(Mesh mesh, VertexData data, ushort[] boneIds, Dictionary<int, Matrix> pose)
+    {
+        for (var i = 0; i < data.VertexCount; i++)
+        {
+            var w = data.GetColour(i, 1);
+            var b = data.GetColour(i, 2);
+            float total = w.R + w.G + w.B + w.A;
+            if (total == 0) continue;
+            var p = new Vector3(mesh.Positions[i * 3], mesh.Positions[i * 3 + 1], mesh.Positions[i * 3 + 2]);
+            var n = new Vector3(mesh.Normals[i * 3], mesh.Normals[i * 3 + 1], mesh.Normals[i * 3 + 2]);
+            Vector3 dp = Vector3.Zero, dn = Vector3.Zero;
+            foreach (var (weight, slot) in new[] { (w.R, b.R), (w.G, b.G), (w.B, b.B), (w.A, b.A) })
+            {
+                var bone = boneIds is { Length: > 0 } && slot < boneIds.Length ? boneIds[slot] : slot;
+                if (weight == 0 || !pose.TryGetValue(bone, out var m)) continue;
+                dp += (Vector3.TransformCoordinate(p, m) - p) * (weight / total);
+                dn += (Vector3.TransformNormal(n, m) - n) * (weight / total);
+            }
+            p += dp;
+            mesh.Positions[i * 3] = p.X; mesh.Positions[i * 3 + 1] = p.Y; mesh.Positions[i * 3 + 2] = p.Z;
+            if (!mesh.HasNormals) continue;
+            n = Vector3.Normalize(n + dn);
+            mesh.Normals[i * 3] = n.X; mesh.Normals[i * 3 + 1] = n.Y; mesh.Normals[i * 3 + 2] = n.Z;
+        }
     }
 
     private static void Transform(Mesh mesh, Matrix m)

@@ -63,6 +63,7 @@ public sealed class Runner
     private readonly object objectLock = new();
     private (string Key, Library Lib, List<ObjectItem> Items) lastObjects;
     private readonly ConcurrentDictionary<string, List<Mesh>> heads = new();
+    private readonly ConcurrentDictionary<string, Dictionary<int, SharpDX.Matrix>> poses = new();
 
     public GameArchive Game { get; private set; }
     public string GameStatus { get; private set; } = "";
@@ -256,6 +257,10 @@ public sealed class Runner
                 {
                     index = entry.S + it.Num;
                 }
+                else if (it.Drawable.Entry != null)
+                {
+                    continue;
+                }
                 else
                 {
                     unknown++;
@@ -370,6 +375,14 @@ public sealed class Runner
         });
     }
 
+    private Dictionary<int, SharpDX.Matrix> Pose(string sex)
+    {
+        var game = Game;
+        if (game == null || GameLoading) return null;
+        return poses.GetOrAdd(game.Folder + "|" + sex, _ =>
+            Assets3D.ArmsDown(game.Index.Get((sex == "male" ? "mp_m_freemode_01" : "mp_f_freemode_01") + ".yft")?.LoadFragment().Fragment?.Drawable?.Skeleton));
+    }
+
     private void Execute(RunState run, List<Job> todo, bool withHead)
     {
         var lastProgress = Stopwatch.StartNew();
@@ -397,7 +410,7 @@ public sealed class Runner
                 else
                 {
                     tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), MaxTexture) : null;
-                    meshes = Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables());
+                    meshes = Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables(), job.Comp.Prop ? null : Pose(job.Item.Sex));
                     if (meshes.Count == 0) throw new InvalidDataException("no mesh");
                     var head = withHead && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
                     rgba = head.Count > 0

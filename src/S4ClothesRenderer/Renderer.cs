@@ -288,7 +288,7 @@ public readonly struct Camera
     public static Camera Of(View view) => view switch
     {
         View.Back => new Camera(-Vector3.UnitX, Vector3.UnitZ, Vector3.UnitY),
-        View.Head => new Camera(-Vector3.UnitZ, Vector3.UnitX, -Vector3.UnitY),
+        View.Head => new Camera(Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY),
         View.Wrist => new Camera(Vector3.UnitX, -Vector3.UnitY, -Vector3.UnitZ),
         _ => new Camera(Vector3.UnitX, Vector3.UnitZ, -Vector3.UnitY),
     };
