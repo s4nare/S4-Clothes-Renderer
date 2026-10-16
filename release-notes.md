@@ -1,11 +1,11 @@
 ## FR
 
-- **Couleurs des véhicules** : chaque véhicule prend les couleurs d'usine du jeu (primaire et secondaire). Option **Couleurs** : **Une seule** (la teinte la plus vive) ou **Toutes** les variantes (`adder_0.png`, `adder_1.png`…).
-- **Meilleur rendu des véhicules** : modèle haute définition, carrosserie brillante avec reflets, vitres plus réalistes.
-- Option « La première » renommée « Une seule ».
+- **Cheveux sur un visage** : nouvelle option **Cheveux** : **Seuls** ou **Sur un visage**. La coupe est posée sur la tête du ped freemode, vue de 3/4, pour bien voir sa forme (fichiers du jeu requis).
+- **Couleurs des cheveux DLC** : les cheveux qui sortaient verts ont maintenant une couleur naturelle.
+- **Masques et vêtements** : ils ne sont plus repeints en marron (ex. le masque de démon redevient rouge).
 
 ## EN
 
-- **Vehicle colours**: every vehicle uses the game's factory colours (primary and secondary). **Colours** option: **One only** (the most vivid one) or **All** variants (`adder_0.png`, `adder_1.png`…).
-- **Better vehicle rendering**: high-detail model, glossy paint with reflections, more realistic glass.
-- "First only" option renamed "One only".
+- **Hair on a face**: new **Hair** option: **Alone** or **On a face**. The haircut sits on the freemode ped's head, seen at 3/4, so its shape is easy to read (game files required).
+- **DLC hair colours**: hair that came out green now has a natural colour.
+- **Masks and clothes**: no longer repainted brown (e.g. the devil mask is red again).
