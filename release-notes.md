@@ -1,11 +1,9 @@
 ## FR
 
-- **Cheveux sur un visage** : nouvelle option **Cheveux** : **Seuls** ou **Sur un visage**. La coupe est posée sur la tête du ped freemode, vue de 3/4, pour bien voir sa forme (fichiers du jeu requis).
-- **Couleurs des cheveux DLC** : les cheveux qui sortaient verts ont maintenant une couleur naturelle.
-- **Masques et vêtements** : ils ne sont plus repeints en marron (ex. le masque de démon redevient rouge).
+- **Dossiers plus clairs** : en mode « Par catégorie », les images sont rangées par genre dans des dossiers simples : `male/torso2`, `male/kevlar`, `female/hair`… (`mask`, `hair`, `torso`, `leg`, `bag`, `shoes`, `accessory`, `undershirt`, `kevlar`, `decals`, `torso2`, `hat`, `glasses`, `ear`, `watch`, `bracelet`).
+- Les images rendues avec une version précédente sont dans les anciens dossiers : relance le rendu.
 
 ## EN
 
-- **Hair on a face**: new **Hair** option: **Alone** or **On a face**. The haircut sits on the freemode ped's head, seen at 3/4, so its shape is easy to read (game files required).
-- **DLC hair colours**: hair that came out green now has a natural colour.
-- **Masks and clothes**: no longer repainted brown (e.g. the devil mask is red again).
+- **Clearer folders**: in "By category" mode, images are sorted by gender into simple folders: `male/torso2`, `male/kevlar`, `female/hair`… (`mask`, `hair`, `torso`, `leg`, `bag`, `shoes`, `accessory`, `undershirt`, `kevlar`, `decals`, `torso2`, `hat`, `glasses`, `ear`, `watch`, `bracelet`).
+- Images rendered with a previous version are in the old folders: run the render again.
