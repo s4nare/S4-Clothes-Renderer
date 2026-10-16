@@ -95,7 +95,7 @@ Pose un `branding.json` à côté de l'exe (voir `branding.example.json`) pour c
 ## Compiler
 
 ```
-git clone --recursive https://github.com/s4nare/S4ClothesRenderer
+git clone --recursive https://github.com/s4nare/S4-Clothes-Renderer
 dotnet publish src/S4ClothesRenderer/S4ClothesRenderer.csproj -c Release -o publish
 ```
 
@@ -146,7 +146,7 @@ Put a `branding.json` next to the exe (see `branding.example.json`) to change th
 ### Build
 
 ```
-git clone --recursive https://github.com/s4nare/S4ClothesRenderer
+git clone --recursive https://github.com/s4nare/S4-Clothes-Renderer
 dotnet publish src/S4ClothesRenderer/S4ClothesRenderer.csproj -c Release -o publish
 ```
 

@@ -13,6 +13,7 @@ public sealed class Settings
     public int Size { get; set; } = 512;
     public bool Force { get; set; }
     public bool Head { get; set; }
+    public string Pose { get; set; } = "down";
     public string Lang { get; set; } = "";
     public string ResourcePath { get; set; } = "";
     public string SeenVersion { get; set; } = "";

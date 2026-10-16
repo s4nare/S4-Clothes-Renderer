@@ -21,6 +21,9 @@ local function spawn(model)
     while not HasModelLoaded(model) and GetGameTimer() < timeout do
         Wait(0)
     end
+    if not HasModelLoaded(model) then
+        return nil
+    end
     local coords = GetEntityCoords(PlayerPedId())
     local ped = CreatePed(4, model, coords.x, coords.y, coords.z - 50.0, 0.0, false, true)
     SetModelAsNoLongerNeeded(model)
@@ -31,6 +34,12 @@ RegisterNetEvent('clothes_refs:collect', function()
     local refs = {}
     for sex, model in pairs(MODELS) do
         local ped = spawn(model)
+        if not ped or ped == 0 then
+            BeginTextCommandThefeedPost('STRING')
+            AddTextComponentSubstringPlayerName('clothes_refs : ' .. sex .. ' model failed to load, try again.')
+            EndTextCommandThefeedPostTicker(false, false)
+            return
+        end
         Wait(500)
         local cats = {}
         for cat, slot in pairs(DRAWABLES) do

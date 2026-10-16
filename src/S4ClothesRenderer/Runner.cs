@@ -30,6 +30,7 @@ public sealed class JobOptions
     public int Size { get; set; } = 512;
     public bool Force { get; set; }
     public bool Head { get; set; }
+    public string Pose { get; set; } = "files";
     public List<string> Sexes { get; set; } = [];
     public List<string> Cats { get; set; } = [];
     public string Sex { get; set; } = "";
@@ -46,6 +47,7 @@ public sealed class RunState
     public int Failed;
     public int Skipped;
     public int NoTexture;
+    public int Empty;
     public string Current = "";
     public bool Finished;
     public bool Stopping;
@@ -63,7 +65,7 @@ public sealed class Runner
     private readonly object objectLock = new();
     private (string Key, Library Lib, List<ObjectItem> Items) lastObjects;
     private readonly ConcurrentDictionary<string, List<Mesh>> heads = new();
-    private readonly ConcurrentDictionary<string, Dictionary<int, SharpDX.Matrix>> poses = new();
+    private readonly ConcurrentDictionary<string, Rig> rigs = new();
 
     public GameArchive Game { get; private set; }
     public string GameStatus { get; private set; } = "";
@@ -160,6 +162,7 @@ public sealed class Runner
     public void Invalidate()
     {
         lock (scanLock) lastScan = default;
+        lock (objectLock) lastObjects = default;
     }
 
     public object Scan(JobOptions o)
@@ -334,7 +337,7 @@ public sealed class Runner
         var processed = r.Done + r.Failed;
         var elapsed = r.Clock.Elapsed.TotalSeconds;
         int? eta = !r.Finished && processed >= 3 ? (int)Math.Round((r.Total - processed) / (processed / elapsed)) : null;
-        return new { total = r.Total, done = r.Done, failed = r.Failed, skipped = r.Skipped, noTexture = r.NoTexture, current = r.Current, eta, elapsed = (int)elapsed, finished = r.Finished, stopped = r.Stopping };
+        return new { total = r.Total, done = r.Done, failed = r.Failed, skipped = r.Skipped, noTexture = r.NoTexture, empty = r.Empty, current = r.Current, eta, elapsed = (int)elapsed, finished = r.Finished, stopped = r.Stopping };
     }
 
     public void Stop()
@@ -353,7 +356,7 @@ public sealed class Runner
         for (var i = 0; i < todo.Count; i++) todo[i].Seq = i;
         var run = Run = new RunState { Total = todo.Count, Skipped = jobs.Count - todo.Count };
         if (unknown > 0) send("log", new { key = o.Naming == "game" ? "unknown_skipped" : "unknown_sorted", n = unknown });
-        Task.Run(() => Execute(run, todo, o.Head));
+        Task.Run(() => Execute(run, todo, o));
         return new { total = todo.Count, skipped = run.Skipped };
     }
 
@@ -375,66 +378,103 @@ public sealed class Runner
         });
     }
 
-    private Dictionary<int, SharpDX.Matrix> Pose(string sex)
+    private Rig ArmsDown(string sex)
     {
         var game = Game;
         if (game == null || GameLoading) return null;
-        return poses.GetOrAdd(game.Folder + "|" + sex, _ =>
-            Assets3D.ArmsDown(game.Index.Get((sex == "male" ? "mp_m_freemode_01" : "mp_f_freemode_01") + ".yft")?.LoadFragment().Fragment?.Drawable?.Skeleton));
+        return rigs.GetOrAdd(game.Folder + "|" + sex, _ =>
+        {
+            try
+            {
+                var file = game.Index.Get(sex == "male" ? "mp_m_freemode_01.yft" : "mp_f_freemode_01.yft");
+                return file == null ? null : Rig.ArmsDown(file.LoadFragment().Fragment?.Drawable?.Skeleton);
+            }
+            catch
+            {
+                return null;
+            }
+        });
     }
 
-    private void Execute(RunState run, List<Job> todo, bool withHead)
+    private static List<Mesh> LoadMeshes(Job job)
+    {
+        var meshes = job.Obj != null ? Objects.Scene(job.Obj, job.Lib, MaxTexture) : Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables());
+        if (meshes.Count == 0) throw new InvalidDataException("no mesh");
+        return meshes;
+    }
+
+    private void Execute(RunState run, List<Job> todo, JobOptions o)
     {
         var lastProgress = Stopwatch.StartNew();
         var options = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
-        Parallel.ForEach(todo, options, (job, state) =>
+        var posed = o.Kind == "clothes" && o.Pose == "down" ? new[] { "male", "female" }.ToDictionary(s => s, ArmsDown) : null;
+        if (posed != null && posed.Values.Any(r => r == null)) send("log", new { key = "pose_unavailable" });
+        var groups = Partitioner.Create(todo.GroupBy(j => (object)j.Item ?? j.Obj).ToList(), EnumerablePartitionerOptions.NoBuffering);
+        Parallel.ForEach(groups, options, () => new RenderBuffers(), (group, state, buffers) =>
         {
-            if (run.Stopping)
+            List<Mesh> meshes = null;
+            var placeholder = false;
+            foreach (var job in group)
             {
-                state.Stop();
-                return;
-            }
-            run.Current = job.Label;
-            try
-            {
-                Tex tex = null;
-                List<Mesh> meshes;
-                byte[] rgba;
-                if (job.Obj != null)
+                if (run.Stopping)
                 {
-                    meshes = Objects.Scene(job.Obj, job.Lib, MaxTexture);
-                    Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
-                    if (meshes.Count == 0) throw new InvalidDataException("no mesh");
-                    rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false);
+                    state.Stop();
+                    break;
                 }
-                else
+                run.Current = job.Label;
+                try
                 {
-                    tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), MaxTexture) : null;
-                    meshes = Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables(), job.Comp.Prop ? null : Pose(job.Item.Sex));
-                    if (meshes.Count == 0) throw new InvalidDataException("no mesh");
-                    var head = withHead && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
-                    rgba = head.Count > 0
-                        ? Renderer.Render(meshes.Sum(m => m.Indices.Length / 3) <= 4 ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false)
-                        : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair");
+                    if (meshes == null)
+                    {
+                        meshes = LoadMeshes(job);
+                        placeholder = job.Obj == null && Renderer.IsPlaceholder(meshes);
+                        if (posed != null && !placeholder && !job.Comp.Prop) posed[job.Item.Sex]?.Apply(meshes);
+                    }
+                    Tex tex = null;
+                    byte[] rgba = null;
+                    if (job.Obj != null)
+                    {
+                        Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
+                        rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false, buffers);
+                    }
+                    else
+                    {
+                        var head = o.Head && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
+                        if (!placeholder || head.Count > 0)
+                        {
+                            tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), Math.Min(MaxTexture, job.Size * 2)) : null;
+                            rgba = head.Count > 0
+                                ? Renderer.Render(placeholder ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false, buffers)
+                                : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair", buffers);
+                        }
+                    }
+                    if (rgba == null)
+                    {
+                        rgba = new byte[job.Size * job.Size * 4];
+                        Interlocked.Increment(ref run.Empty);
+                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(job.Out));
+                    File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));
+                    Interlocked.Increment(ref run.Done);
+                    if (job.Obj == null && !placeholder && tex == null) Interlocked.Increment(ref run.NoTexture);
+                    send("image", new { url = ImageUrl(job.Out), @out = job.Out, label = job.Label, source = job.Source, seq = job.Seq, sex = job.Item?.Sex, comp = job.Item?.Comp, kind = job.Obj?.Kind ?? "clothes", group = job.Obj?.Group });
                 }
-                Directory.CreateDirectory(Path.GetDirectoryName(job.Out));
-                File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));
-                Interlocked.Increment(ref run.Done);
-                if (job.Obj == null && tex == null) Interlocked.Increment(ref run.NoTexture);
-                send("image", new { url = ImageUrl(job.Out), @out = job.Out, label = job.Label, source = job.Source, seq = job.Seq, sex = job.Item?.Sex, comp = job.Item?.Comp, kind = job.Obj?.Kind ?? "clothes", group = job.Obj?.Group });
+                catch (Exception e)
+                {
+                    Interlocked.Increment(ref run.Failed);
+                    send("log", new { key = "failed", label = job.Source, message = e.Message });
+                }
+                lock (lastProgress)
+                {
+                    if (lastProgress.ElapsedMilliseconds < 100) continue;
+                    lastProgress.Restart();
+                }
+                send("progress", Progress());
             }
-            catch (Exception e)
-            {
-                Interlocked.Increment(ref run.Failed);
-                send("log", new { key = "failed", label = job.Source, message = e.Message });
-            }
-            lock (lastProgress)
-            {
-                if (lastProgress.ElapsedMilliseconds < 100) return;
-                lastProgress.Restart();
-            }
-            send("progress", Progress());
-        });
+            return buffers;
+        }, _ => { });
+        if (run.Empty > 0) send("log", new { key = "empty_slots", n = run.Empty });
+        if (run.NoTexture > 0) send("log", new { key = "no_texture", n = run.NoTexture });
         run.Finished = true;
         send("progress", Progress());
         send("end", new { });
