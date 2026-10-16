@@ -24,6 +24,8 @@ public sealed class Mesh
     public Tex PaletteTex;
     public int PaintSlot;
     public float[] PaintColor;
+    public int[] Bones;
+    public float[] Weights;
 }
 
 public enum Surface
@@ -143,6 +145,12 @@ public static class Assets3D
         if (mesh.Tint != 0) (mesh.Palette, mesh.PaletteHash) = Sampler(geometry.Shader, mesh.Tint == 2 ? DiffusePalette : TintPaletteSampler, embedded);
         if (mesh.Palette == null && mesh.PaletteHash == 0) mesh.Tint = 0;
         if (mesh.Tint == 1) mesh.TintU = new float[count];
+        var skinned = transform == null && Has(1) && Has(2) && IsByte4(data.Info.GetComponentType(1)) && IsByte4(data.Info.GetComponentType(2));
+        if (skinned)
+        {
+            mesh.Bones = new int[count * 4];
+            mesh.Weights = new float[count * 4];
+        }
         Span<float> v = stackalloc float[4];
         for (var i = 0; i < count; i++)
         {
@@ -165,10 +173,28 @@ public static class Assets3D
                 Read(data, i, 4, v);
                 mesh.TintU[i] = (v[2] + 1) / 2;
             }
+            if (skinned)
+            {
+                var weights = data.GetColour(i, 1);
+                var bones = data.GetColour(i, 2);
+                if (bones.B == 255) continue;
+                ReadSkin(mesh, i, 0, weights.R, bones.R, geometry.BoneIds);
+                ReadSkin(mesh, i, 1, weights.G, bones.G, geometry.BoneIds);
+                ReadSkin(mesh, i, 2, weights.B, bones.B, geometry.BoneIds);
+                ReadSkin(mesh, i, 3, weights.A, bones.A, geometry.BoneIds);
+            }
         }
         for (var i = 0; i < indices.Length; i++) mesh.Indices[i] = indices[i];
         if (transform is { } m && !m.IsIdentity) Transform(mesh, m);
         return mesh;
+    }
+
+    private static bool IsByte4(VertexComponentType type) => type is VertexComponentType.Colour or VertexComponentType.UByte4;
+
+    private static void ReadSkin(Mesh mesh, int vertex, int slot, byte weight, byte bone, ushort[] boneIds)
+    {
+        mesh.Weights[vertex * 4 + slot] = weight / 255f;
+        mesh.Bones[vertex * 4 + slot] = boneIds != null && bone < boneIds.Length ? boneIds[bone] : bone;
     }
 
     private static void Transform(Mesh mesh, Matrix m)
@@ -227,6 +253,10 @@ public static class Assets3D
         var height = Math.Max(1, texture.Height >> mip);
         var rgba = texture.Format == TextureFormat.D3DFMT_BC7 ? Bc7.Decode(texture, mip, width, height) : FromBgra(CodeWalker.Utils.DDSIO.GetPixels(texture, mip));
         if (rgba == null || rgba.Length < width * height * 4) return null;
+        if (texture.Format == TextureFormat.D3DFMT_A8)
+        {
+            for (var i = 0; i < rgba.Length; i += 4) rgba[i + 3] = rgba[i];
+        }
         var alphaMax = 0;
         for (var i = 3; i < rgba.Length; i += 4) if (rgba[i] > alphaMax) alphaMax = rgba[i];
         return new Tex { Width = width, Height = height, Rgba = rgba, UseAlpha = alphaMax > 16 };

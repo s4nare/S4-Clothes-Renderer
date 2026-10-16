@@ -12,7 +12,7 @@ const state = {
     sex: 'male', cat: 'jbib', filter: 'all', items: [], refs: false,
     useGame: true, gamePath: '', game: null,
     kind: 'clothes', objCounts: null, groups: null, groupByKind: {}, groupsPicked: {},
-    opts: { colors: 'first', naming: 'cat', size: '512', force: 'false', head: 'false' },
+    opts: { colors: 'first', naming: 'cat', size: '512', force: 'false', head: 'false', pose: 'files' },
 };
 
 const ui = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -23,7 +23,7 @@ function options() {
         sexes: [...document.querySelectorAll('[name=sex]:checked')].map((e) => e.value),
         cats: [...document.querySelectorAll('[name=pick]:checked')].map((e) => e.value),
         colors: state.opts.colors, naming: state.opts.naming, size: +state.opts.size, force: state.opts.force === 'true',
-        head: state.opts.head === 'true',
+        head: state.opts.head === 'true', pose: state.opts.pose,
         kind: state.kind, groups: [...document.querySelectorAll('[name=group]:checked')].map((e) => e.value),
     };
 }
@@ -104,7 +104,7 @@ function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => api('/api/settings', {
         useGame: state.useGame, gamePath: state.gamePath, folders: state.folders, out: o.out,
-        naming: o.naming, colors: o.colors, size: o.size, force: o.force, head: o.head, lang: LANG,
+        naming: o.naming, colors: o.colors, size: o.size, force: o.force, head: o.head, pose: o.pose, lang: LANG,
     }).then((r) => setRefs(!!r.refs)), 200);
 }
 
@@ -325,6 +325,10 @@ function sourcesChanged() {
     renderSources();
     renderGame();
     save();
+    scan();
+}
+
+function scan() {
     state.counts = null;
     renderEstimate();
     api('/api/scan', options()).then((r) => {
@@ -637,7 +641,8 @@ $('res-copy').onclick = () => navigator.clipboard.writeText($('res-cfg').textCon
 $('open').onclick =() => api('/api/open', { path: $('out').value.trim() });
 
 function start(o) {
-    if (!o.sexes.length || !o.cats.length) return toast(t('run.pickOne'), 'err');
+    if (o.kind === 'clothes' && (!o.sexes.length || !o.cats.length)) return toast(t('run.pickOne'), 'err');
+    if (o.kind !== 'clothes' && !o.groups.length) return toast(t('run.pickGroup'), 'err');
     api('/api/start', o).then((r) => {
         if (r.error) return toast(errorText(r.error), 'err');
         if (!r.total) return toast(t('run.nothing'));
@@ -730,7 +735,11 @@ const handlers = {
     end: () => {
         setRunning(false);
         toast(t('run.finished'), 'ok');
-        loadSummary();
+        if (state.rescan) { state.rescan = false; scan(); } else loadSummary();
+    },
+    sources: () => {
+        if (state.running) state.rescan = true;
+        else scan();
     },
     refs: () => {
         setRefs(true);
@@ -761,7 +770,7 @@ fetch('/api/state').then((r) => r.json()).then((st) => {
     state.gamePath = s.gamePath || '';
     state.game = st.game;
     $('out').value = s.out || '';
-    state.opts = { colors: s.colors, naming: s.naming, size: String(s.size), force: String(s.force), head: String(s.head) };
+    state.opts = { colors: s.colors, naming: s.naming, size: String(s.size), force: String(s.force), head: String(s.head), pose: s.pose };
     if (ui) {
         state.sex = ui.sex || 'male';
         state.cat = ui.cat || 'jbib';
