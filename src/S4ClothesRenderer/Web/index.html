@@ -57,16 +57,17 @@
         <section class="view on" id="view-gallery">
             <aside class="sidebar">
                 <div class="side-head">
-                    <div class="segmented block" id="sex-switch">
+                    <div class="kinds" data-kinds></div>
+                    <div class="segmented block clothes-only" id="sex-switch">
                         <button data-sex="male" aria-checked="true" data-i18n="sex.male"></button>
                         <button data-sex="female" aria-checked="false" data-i18n="sex.female"></button>
                     </div>
                 </div>
                 <div class="side-scroll">
-                    <div class="side-title" data-i18n="group.clothes"></div>
+                    <div class="side-title" id="nav-cloth-title" data-i18n="group.clothes"></div>
                     <div id="nav-cloth"></div>
-                    <div class="side-title" data-i18n="group.props"></div>
-                    <div id="nav-prop"></div>
+                    <div class="side-title clothes-only" data-i18n="group.props"></div>
+                    <div id="nav-prop" class="clothes-only"></div>
                 </div>
             </aside>
             <div class="content">
@@ -114,21 +115,23 @@
                         <div class="card-head"><span class="num">2</span><h3 data-i18n="cats.title"></h3>
                             <div class="act"><button class="link" data-all="1" data-i18n="cats.all"></button><button class="link" data-all="0" data-i18n="cats.none"></button></div>
                         </div>
-                        <div class="chips">
+                        <div class="kinds" data-kinds></div>
+                        <div class="chips clothes-only">
                             <label class="chip-check"><input type="checkbox" name="sex" value="male" checked><span class="box"></span><span class="lbl" data-i18n="sex.male"></span></label>
                             <label class="chip-check"><input type="checkbox" name="sex" value="female" checked><span class="box"></span><span class="lbl" data-i18n="sex.female"></span></label>
                         </div>
-                        <div class="sub-title" data-i18n="group.clothes"></div>
-                        <div class="chips" id="pick-cloth"></div>
-                        <div class="sub-title" data-i18n="group.props"></div>
-                        <div class="chips" id="pick-prop"></div>
+                        <div class="sub-title clothes-only" data-i18n="group.clothes"></div>
+                        <div class="chips clothes-only" id="pick-cloth"></div>
+                        <div class="sub-title clothes-only" data-i18n="group.props"></div>
+                        <div class="chips clothes-only" id="pick-prop"></div>
+                        <div class="chips objects-only" id="pick-groups"></div>
                     </div>
                     <div class="card">
                         <div class="card-head"><span class="num">3</span><h3 data-i18n="opt.title"></h3></div>
-                        <div class="field"><span class="field-label" data-i18n="opt.colors"></span>
+                        <div class="field clothes-only"><span class="field-label" data-i18n="opt.colors"></span>
                             <div class="segmented block" data-option="colors"><button data-value="first" data-i18n="opt.colorsFirst"></button><button data-value="all" data-i18n="opt.colorsAll"></button></div>
                         </div>
-                        <div class="field"><span class="field-label" data-i18n="opt.naming"></span>
+                        <div class="field clothes-only"><span class="field-label" data-i18n="opt.naming"></span>
                             <div class="segmented block" data-option="naming"><button data-value="cat" data-i18n="opt.namingCat"></button><button data-value="game" data-i18n="opt.namingGame"></button></div>
                             <div class="hint" id="hint"></div>
                             <div class="refs-row" id="refs-row"><i class="dot"></i><span id="refs-text"></span><button class="btn small" id="refs-import"><svg class="i"><use href="#download"/></svg><span data-i18n="refs.import"></span></button></div>

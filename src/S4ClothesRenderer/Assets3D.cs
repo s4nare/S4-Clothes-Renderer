@@ -17,6 +17,11 @@ public sealed class Mesh
     public CwTexture Embedded;
     public Surface Surface;
     public Tex Tex;
+    public int Tint;
+    public float[] TintU;
+    public uint PaletteHash;
+    public CwTexture Palette;
+    public Tex PaletteTex;
 }
 
 public enum Surface
@@ -42,6 +47,24 @@ public static class Assets3D
     private static readonly HashSet<uint> GlassShaders = Hashes("vehicle_vehglass", "glass", "glass_pv", "glass_pv_env", "glass_env", "glass_spec", "glass_reflect", "glass_breakable", "glass_breakable_screendooralpha", "glass_displacement", "glass_emissive", "glass_emissivenight", "glass_emissive_alpha", "glass_emissivenight_alpha");
     private static readonly HashSet<uint> HiddenShaders = Hashes("vehicle_vehglass_inner", "vehicle_shadow", "shadow_proxy", "vehicle_blurredrotor");
     private const uint DiffuseSampler = 4059966321;
+    private const uint TintPaletteSampler = 4131954791;
+    private static readonly uint DiffusePalette = JenkHash.GenHash("texturesamplerdiffpal");
+
+    private static (CwTexture Texture, uint Hash) Sampler(ShaderFX shader, uint sampler, TextureDictionary embedded)
+    {
+        var parameters = shader?.ParametersList;
+        if (parameters?.Hashes == null || parameters.Parameters == null) return (null, 0);
+        for (var i = 0; i < parameters.Hashes.Length && i < parameters.Parameters.Length; i++)
+        {
+            if ((uint)parameters.Hashes[i] != sampler) continue;
+            var value = parameters.Parameters[i].Data;
+            if (value is not TextureBase texture) return (null, 0);
+            var hash = texture.NameHash != 0 ? texture.NameHash : JenkHash.GenHash((texture.Name ?? "").ToLowerInvariant());
+            var direct = value is CwTexture t && t.Data?.FullData != null ? t : null;
+            return (direct ?? embedded?.Lookup(hash), hash);
+        }
+        return (null, 0);
+    }
 
     private static HashSet<uint> Hashes(params string[] names) =>
         [.. names.SelectMany(n => new[] { JenkHash.GenHash(n), JenkHash.GenHash(n + ".sps") })];
@@ -95,19 +118,12 @@ public static class Assets3D
             AlphaTest = geometry.Shader == null || geometry.Shader.RenderBucket != 0,
             Surface = Is(PaintShaders, geometry.Shader) ? Surface.Paint : Is(GlassShaders, geometry.Shader) ? Surface.Glass : Surface.Textured,
         };
-        var parameters = geometry.Shader?.ParametersList;
-        if (parameters?.Hashes != null && parameters.Parameters != null)
-        {
-            for (var i = 0; i < parameters.Hashes.Length && i < parameters.Parameters.Length; i++)
-            {
-                if ((uint)parameters.Hashes[i] != DiffuseSampler) continue;
-                var value = parameters.Parameters[i].Data;
-                if (value is CwTexture direct && direct.Data?.FullData != null) mesh.Embedded = direct;
-                if (value is TextureBase texture) mesh.Diffuse = texture.NameHash != 0 ? texture.NameHash : JenkHash.GenHash((texture.Name ?? "").ToLowerInvariant());
-                break;
-            }
-        }
-        if (mesh.Embedded == null && mesh.Diffuse != 0) mesh.Embedded = embedded?.Lookup(mesh.Diffuse);
+        (mesh.Embedded, mesh.Diffuse) = Sampler(geometry.Shader, DiffuseSampler, embedded);
+        var fileHash = geometry.Shader?.FileName.Hash ?? 0;
+        mesh.Tint = fileHash is 3267631682 or 14185869 ? 1 : fileHash is 231364109 or 3294641629 or 731050667 ? 2 : 0;
+        if (mesh.Tint != 0) (mesh.Palette, mesh.PaletteHash) = Sampler(geometry.Shader, mesh.Tint == 2 ? DiffusePalette : TintPaletteSampler, embedded);
+        if (mesh.Palette == null && mesh.PaletteHash == 0) mesh.Tint = 0;
+        if (mesh.Tint == 1) mesh.TintU = new float[count];
         Span<float> v = stackalloc float[4];
         for (var i = 0; i < count; i++)
         {
@@ -124,6 +140,11 @@ public static class Assets3D
             {
                 Read(data, i, 6, v);
                 mesh.Uvs[i * 2] = v[0]; mesh.Uvs[i * 2 + 1] = v[1];
+            }
+            if (mesh.TintU != null && Has(4))
+            {
+                Read(data, i, 4, v);
+                mesh.TintU[i] = (v[2] + 1) / 2;
             }
         }
         for (var i = 0; i < indices.Length; i++) mesh.Indices[i] = indices[i];

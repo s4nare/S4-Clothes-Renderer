@@ -6,6 +6,8 @@ namespace S4ClothesRenderer;
 public sealed class Job
 {
     public ClothingItem Item;
+    public ObjectItem Obj;
+    public Library Lib;
     public FileRef Texture;
     public Component Comp;
     public int Size;
@@ -29,6 +31,9 @@ public sealed class JobOptions
     public List<string> Cats { get; set; } = [];
     public string Sex { get; set; } = "";
     public string Cat { get; set; } = "";
+    public string Kind { get; set; } = "clothes";
+    public List<string> Groups { get; set; } = [];
+    public string Group { get; set; } = "";
 }
 
 public sealed class RunState
@@ -52,6 +57,8 @@ public sealed class Runner
     private readonly Action<string, object> send;
     private readonly object scanLock = new();
     private (string Key, List<ClothingItem> Items) lastScan;
+    private readonly object objectLock = new();
+    private (string Key, Library Lib, List<ObjectItem> Items) lastObjects;
 
     public GameArchive Game { get; private set; }
     public string GameStatus { get; private set; } = "";
@@ -126,6 +133,25 @@ public sealed class Runner
         }
     }
 
+    private (Library Lib, List<ObjectItem> Items) ObjectsFor(bool useGame, List<string> folders)
+    {
+        var game = useGame && Game != null && !GameLoading ? Game : null;
+        var key = (game?.Folder ?? "") + "|" + string.Join("|", folders);
+        lock (objectLock)
+        {
+            if (lastObjects.Key == key) return (lastObjects.Lib, lastObjects.Items);
+            var local = new ContentIndex();
+            for (var i = 0; i < folders.Count; i++)
+            {
+                if (!Directory.Exists(folders[i])) continue;
+                foreach (var file in Directory.EnumerateFiles(folders[i], "*.*", SearchOption.AllDirectories)) local.Add(Path.GetFileName(file), new FileRef(file), 10 + i);
+            }
+            var lib = new Library(local, game?.Index);
+            lastObjects = (key, lib, Objects.Build(lib));
+            return (lastObjects.Lib, lastObjects.Items);
+        }
+    }
+
     public void Invalidate()
     {
         lock (scanLock) lastScan = default;
@@ -140,7 +166,27 @@ public sealed class Runner
             c[0]++;
             c[1] += Math.Max(1, it.Colors.Count);
         }
-        return new { counts };
+        var objects = Objects.Kinds.ToDictionary(k => k, _ => new SortedDictionary<string, int>());
+        foreach (var it in ObjectsFor(o.UseGame, o.Folders).Items)
+        {
+            objects[it.Kind][it.Group] = objects[it.Kind].GetValueOrDefault(it.Group) + 1;
+        }
+        return new { counts, objects };
+    }
+
+    private List<Job> ObjectJobs(JobOptions o)
+    {
+        var (lib, items) = ObjectsFor(o.UseGame, o.Folders);
+        var size = Sizes.Contains(o.Size) ? o.Size : 512;
+        var kindOrder = Array.IndexOf(Objects.Kinds, o.Kind);
+        return [.. items.Where(i => i.Kind == o.Kind && o.Groups.Contains(i.Group))
+            .Select(i => new Job
+            {
+                Obj = i, Lib = lib, Size = size, Out = Path.Combine(o.Out, i.Kind, string.Concat(i.Name.Split(Path.GetInvalidFileNameChars())) + ".png"),
+                Label = i.Name, Source = i.Label != i.Name && i.Label != "" ? i.Label : i.Group,
+                Sort = (2, kindOrder, 0, i.Group + "\u0001" + i.Name.ToLowerInvariant(), 0, 'a'),
+            })
+            .OrderBy(j => j.Sort)];
     }
 
     public static string RefsFile(string outDir) => string.IsNullOrWhiteSpace(outDir) ? null : Path.Combine(outDir, "refs.json");
@@ -177,6 +223,7 @@ public sealed class Runner
 
     private (List<Job> Jobs, int Unknown, string Error) BuildJobs(JobOptions o)
     {
+        if (o.Kind != "clothes") return (ObjectJobs(o), 0, null);
         var refs = ReadRefs(o.Out);
         if (o.Naming == "game" && refs == null) return (null, 0, "refs_missing");
         var size = Sizes.Contains(o.Size) ? o.Size : 512;
@@ -225,6 +272,7 @@ public sealed class Runner
     {
         o.Sexes = [o.Sex];
         o.Cats = [o.Cat];
+        o.Groups = [o.Group];
         var (jobs, _, error) = BuildJobs(o);
         if (error != null) return new { error };
         return new { items = jobs.Select(j => new { j.Out, j.Label, j.Source, url = File.Exists(j.Out) ? ImageUrl(j.Out) : null }) };
@@ -232,6 +280,18 @@ public sealed class Runner
 
     public object Summary(JobOptions o)
     {
+        if (o.Kind != "clothes")
+        {
+            o.Groups = [.. ObjectsFor(o.UseGame, o.Folders).Items.Where(i => i.Kind == o.Kind).Select(i => i.Group).Distinct()];
+            var groups = new SortedDictionary<string, int[]>();
+            foreach (var j in ObjectJobs(o))
+            {
+                if (!groups.TryGetValue(j.Obj.Group, out var g)) groups[j.Obj.Group] = g = new int[2];
+                g[0]++;
+                if (File.Exists(j.Out)) g[1]++;
+            }
+            return new { groups, refs = HasRefs(o.Out) };
+        }
         o.Sexes = ["male", "female"];
         o.Cats = [.. Component.All.Select(c => c.Key)];
         var refs = HasRefs(o.Out);
@@ -291,15 +351,27 @@ public sealed class Runner
             run.Current = job.Label;
             try
             {
-                var tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), MaxTexture) : null;
-                var meshes = Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables());
-                if (meshes.Count == 0) throw new InvalidDataException("no mesh");
-                var rgba = Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair");
+                Tex tex = null;
+                List<Mesh> meshes;
+                byte[] rgba;
+                if (job.Obj != null)
+                {
+                    meshes = Objects.Scene(job.Obj, job.Lib, MaxTexture);
+                    if (meshes.Count == 0) throw new InvalidDataException("no mesh");
+                    rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false);
+                }
+                else
+                {
+                    tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), MaxTexture) : null;
+                    meshes = Assets3D.ReadMeshes(job.Item.Drawable.LoadDrawables());
+                    if (meshes.Count == 0) throw new InvalidDataException("no mesh");
+                    rgba = Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair");
+                }
                 Directory.CreateDirectory(Path.GetDirectoryName(job.Out));
                 File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));
                 Interlocked.Increment(ref run.Done);
-                if (tex == null) Interlocked.Increment(ref run.NoTexture);
-                send("image", new { url = ImageUrl(job.Out), @out = job.Out, label = job.Label, source = job.Source, seq = job.Seq, sex = job.Item.Sex, comp = job.Item.Comp });
+                if (job.Obj == null && tex == null) Interlocked.Increment(ref run.NoTexture);
+                send("image", new { url = ImageUrl(job.Out), @out = job.Out, label = job.Label, source = job.Source, seq = job.Seq, sex = job.Item?.Sex, comp = job.Item?.Comp, kind = job.Obj?.Kind ?? "clothes", group = job.Obj?.Group });
             }
             catch (Exception e)
             {

@@ -11,6 +11,7 @@ const state = {
     categories: [], folders: [], counts: null, summary: null, running: false, errors: 0,
     sex: 'male', cat: 'jbib', filter: 'all', items: [], refs: false,
     useGame: true, gamePath: '', game: null,
+    kind: 'clothes', objCounts: null, groups: null, groupByKind: {}, groupsPicked: {},
     opts: { colors: 'first', naming: 'cat', size: '512', force: 'false' },
 };
 
@@ -22,13 +23,66 @@ function options() {
         sexes: [...document.querySelectorAll('[name=sex]:checked')].map((e) => e.value),
         cats: [...document.querySelectorAll('[name=pick]:checked')].map((e) => e.value),
         colors: state.opts.colors, naming: state.opts.naming, size: +state.opts.size, force: state.opts.force === 'true',
+        kind: state.kind, groups: [...document.querySelectorAll('[name=group]:checked')].map((e) => e.value),
     };
+}
+
+const isObjects = () => state.kind !== 'clothes';
+const KINDS = ['clothes', 'vehicles', 'weapons', 'props', 'peds'];
+
+function grpLabel(kind, group) {
+    const key = 'grp.' + kind + '.' + group;
+    const text = t(key);
+    if (text !== key) return text;
+    if (group.length <= 3) return group.toUpperCase();
+    const g = group.replace(/_/g, ' ');
+    return g.charAt(0).toUpperCase() + g.slice(1);
+}
+
+function kindGroups() {
+    const counts = state.objCounts && state.objCounts[state.kind];
+    return counts ? Object.keys(counts).sort((a, b) => grpLabel(state.kind, a).localeCompare(grpLabel(state.kind, b))) : [];
+}
+
+function renderKinds() {
+    document.body.classList.toggle('objects', isObjects());
+    document.querySelectorAll('[data-kinds]').forEach((box) => {
+        box.innerHTML = '';
+        for (const k of KINDS) {
+            const b = document.createElement('button');
+            b.textContent = t('kind.' + k);
+            b.setAttribute('aria-checked', String(k === state.kind));
+            b.disabled = state.running && box.closest('.settings');
+            b.onclick = () => setKind(k);
+            box.append(b);
+        }
+    });
+}
+
+function setKind(kind) {
+    if (state.kind === kind) return;
+    state.kind = kind;
+    state.summary = null;
+    state.groups = null;
+    if (isObjects() && !state.groupByKind[kind]) state.groupByKind[kind] = kindGroups()[0] || '';
+    renderKinds();
+    renderGroupPicks();
+    save();
+    renderNav();
+    renderEstimate();
+    loadSummary();
+    loadCategory();
 }
 
 let saveTimer = null;
 function save() {
     const o = options();
-    localStorage.setItem(STORE, JSON.stringify({ sexes: o.sexes, cats: o.cats, sex: state.sex, cat: state.cat, thumb: $('thumb').value }));
+    if (isObjects() && state.objCounts) state.groupsPicked[state.kind] = o.groups;
+    localStorage.setItem(STORE, JSON.stringify({
+        sexes: o.sexes, cats: o.cats,
+        sex: state.sex, cat: state.cat, thumb: $('thumb').value,
+        kind: state.kind, groupByKind: state.groupByKind, groupsPicked: state.groupsPicked,
+    }));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => api('/api/settings', {
         useGame: state.useGame, gamePath: state.gamePath, folders: state.folders, out: o.out,
@@ -87,6 +141,25 @@ const catSlot = (key) => (state.categories.find((c) => c.key === key) || {}).slo
 const slotShort = (slot) => slot.startsWith('prop_') ? 'P' + slot.slice(5) : slot;
 
 function renderNav() {
+    if (isObjects()) {
+        $('nav-cloth-title').textContent = t('kind.' + state.kind);
+        const box = $('nav-cloth');
+        box.innerHTML = '';
+        for (const g of kindGroups()) {
+            const row = document.createElement('button');
+            row.className = 'list-row' + (g === state.groupByKind[state.kind] ? ' active' : '');
+            row.innerHTML = '<span class="name"></span><span class="cnt"></span>';
+            row.querySelector('.name').textContent = grpLabel(state.kind, g);
+            const s = state.groups && state.groups[g];
+            const cnt = row.querySelector('.cnt');
+            if (!s) cnt.textContent = state.groups ? '—' : fmt(state.objCounts[state.kind][g]);
+            else { cnt.textContent = fmt(s[1]) + ' / ' + fmt(s[0]); cnt.classList.toggle('full', s[1] === s[0]); }
+            row.onclick = () => { state.groupByKind[state.kind] = g; save(); renderNav(); loadCategory(); };
+            box.append(row);
+        }
+        return;
+    }
+    $('nav-cloth-title').textContent = t('group.clothes');
     for (const prop of [false, true]) {
         const box = $(prop ? 'nav-prop' : 'nav-cloth');
         box.innerHTML = '';
@@ -108,8 +181,11 @@ function renderNav() {
 }
 
 function loadSummary() {
+    const kind = state.kind;
     api('/api/summary', options()).then((r) => {
+        if (kind !== state.kind) return;
         state.summary = r.counts || null;
+        state.groups = r.groups || null;
         if (r.refs != null) setRefs(r.refs);
         renderNav();
         renderCatHead();
@@ -118,8 +194,11 @@ function loadSummary() {
 
 function renderCatHead() {
     const done = state.items.filter((i) => i.url).length, total = state.items.length;
-    $('cat-title').textContent = catLabel(state.cat);
-    const parts = [t('sex.' + state.sex), t('gallery.component', { slot: catSlot(state.cat).replace('prop_', 'prop ') }), t('gallery.images', { n: fmt(total) }), t('gallery.rendered', { n: fmt(done) })];
+    const group = state.groupByKind[state.kind] || '';
+    $('cat-title').textContent = isObjects() ? (group ? grpLabel(state.kind, group) : t('kind.' + state.kind)) : catLabel(state.cat);
+    const parts = isObjects()
+        ? [t('kind.' + state.kind), t('gallery.images', { n: fmt(total) }), t('gallery.rendered', { n: fmt(done) })]
+        : [t('sex.' + state.sex), t('gallery.component', { slot: catSlot(state.cat).replace('prop_', 'prop ') }), t('gallery.images', { n: fmt(total) }), t('gallery.rendered', { n: fmt(done) })];
     $('cat-sub').innerHTML = parts.map(() => '<span></span>').join('<span class="sep"></span>');
     $('cat-sub').querySelectorAll('span:not(.sep)').forEach((el, i) => { el.textContent = parts[i]; });
     $('cat-bar').style.width = (total ? done / total * 100 : 0) + '%';
@@ -175,7 +254,7 @@ function renderGallery() {
 let loadToken = 0;
 function loadCategory() {
     const token = ++loadToken;
-    api('/api/category', { ...options(), sex: state.sex, cat: state.cat }).then((r) => {
+    api('/api/category', { ...options(), sex: state.sex, cat: state.cat, group: state.groupByKind[state.kind] || '' }).then((r) => {
         if (token !== loadToken) return;
         if (r.error) { state.items = []; renderCatHead(); return emptyState($('gallery'), 'image', errorText(r.error)); }
         state.items = r.items;
@@ -231,7 +310,19 @@ function sourcesChanged() {
     save();
     state.counts = null;
     renderEstimate();
-    api('/api/scan', options()).then((r) => { state.counts = r.counts; renderEstimate(); loadSummary(); loadCategory(); });
+    api('/api/scan', options()).then((r) => {
+        state.counts = r.counts;
+        state.objCounts = r.objects;
+        for (const k of KINDS.slice(1)) {
+            const groups = Object.keys((r.objects || {})[k] || {});
+            if (!groups.includes(state.groupByKind[k])) state.groupByKind[k] = groups[0] || '';
+        }
+        renderGroupPicks();
+        renderNav();
+        renderEstimate();
+        loadSummary();
+        loadCategory();
+    });
 }
 
 function renderPicks() {
@@ -253,7 +344,36 @@ function renderPicks() {
     }
 }
 
+function renderGroupPicks() {
+    const box = $('pick-groups');
+    box.innerHTML = '';
+    if (!isObjects()) return;
+    const picked = state.groupsPicked[state.kind];
+    for (const g of kindGroups()) {
+        const label = document.createElement('label');
+        label.className = 'chip-check';
+        label.title = grpLabel(state.kind, g);
+        label.innerHTML = '<input type="checkbox" name="group"><span class="box"></span><span class="lbl"></span><span class="n"></span>';
+        label.querySelector('input').value = g;
+        label.querySelector('input').checked = picked ? picked.includes(g) : true;
+        label.querySelector('input').disabled = state.running;
+        label.querySelector('.lbl').textContent = grpLabel(state.kind, g);
+        box.append(label);
+    }
+}
+
 function renderEstimate() {
+    if (isObjects()) {
+        const counts = state.objCounts && state.objCounts[state.kind];
+        let total = 0;
+        document.querySelectorAll('[name=group]').forEach((box) => {
+            const n = counts ? counts[box.value] || 0 : 0;
+            box.parentNode.querySelector('.n').textContent = fmt(n);
+            if (box.checked) total += n;
+        });
+        $('estimate').textContent = state.objCounts ? fmt(total) : '…';
+        return;
+    }
     const sexes = options().sexes, all = state.opts.colors === 'all';
     let total = 0;
     document.querySelectorAll('[name=pick]').forEach((box) => {
@@ -294,6 +414,7 @@ function setRunning(on) {
     renderGo();
     document.querySelectorAll('.settings-scroll input, .settings-scroll .segmented button, #add-src, #pick, #refs-import, #res-install,#game-pick, #game-detect, [data-all]').forEach((el) => { el.disabled = on; });
     $('run-chip').classList.toggle('on', on);
+    renderKinds();
     $('render-cat').disabled = on || !state.items.length;
 }
 
@@ -330,7 +451,9 @@ function onImage(img) {
     while (live.children.length > 500) live.firstElementChild.remove();
     if (atBottom) live.scrollTop = live.scrollHeight;
 
-    if (img.sex === state.sex && img.comp === state.cat) {
+    const shown = img.kind === 'clothes' ? state.kind === 'clothes' && img.sex === state.sex && img.comp === state.cat
+        : img.kind === state.kind && img.group === state.groupByKind[state.kind];
+    if (shown) {
         const item = state.items.find((i) => i.out === img.out);
         if (item) {
             const wasDone = !!item.url;
@@ -340,7 +463,8 @@ function onImage(img) {
             if (!wasDone) renderCatHead();
         }
     }
-    const s = state.summary && state.summary[img.sex] && state.summary[img.sex][img.comp];
+    const s = img.kind === 'clothes' ? state.kind === 'clothes' && state.summary && state.summary[img.sex] && state.summary[img.sex][img.comp]
+        : img.kind === state.kind && state.groups && state.groups[img.group];
     if (s && s[1] < s[0]) { s[1]++; scheduleNav(); }
 }
 
@@ -380,6 +504,8 @@ function setLang(lang) {
     LANG = lang === 'en' ? 'en' : 'fr';
     setSegment($('lang'), LANG);
     applyI18n();
+    renderKinds();
+    renderGroupPicks();
     renderNav();
     renderPicks();
     renderEstimate();
@@ -420,12 +546,12 @@ document.querySelectorAll('[data-option]').forEach((group) => group.querySelecto
     if (group.dataset.option === 'colors' || group.dataset.option === 'naming') { loadSummary(); loadCategory(); }
 }));
 document.querySelectorAll('[data-all]').forEach((a) => a.onclick = () => {
-    document.querySelectorAll('[name=pick]').forEach((b) => { b.checked = a.dataset.all === '1'; });
+    document.querySelectorAll(isObjects() ? '[name=group]' : '[name=pick]').forEach((b) => { b.checked = a.dataset.all === '1'; });
     save();
     renderEstimate();
 });
 document.addEventListener('change', (e) => {
-    if (e.target.name === 'pick' || e.target.name === 'sex') { save(); renderEstimate(); }
+    if (e.target.name === 'pick' || e.target.name === 'sex' || e.target.name === 'group') { save(); renderEstimate(); }
     if (e.target.id === 'out') { save(); loadSummary(); loadCategory(); }
 });
 
@@ -507,7 +633,7 @@ $('go').onclick = () => {
     }
     start(options());
 };
-$('render-cat').onclick = () => start({ ...options(), sexes: [state.sex], cats: [state.cat] });
+$('render-cat').onclick = () => start({ ...options(), sexes: [state.sex], cats: [state.cat], groups: [state.groupByKind[state.kind] || ''] });
 
 const handlers = {
     progress: showProgress,
@@ -552,6 +678,9 @@ fetch('/api/state').then((r) => r.json()).then((st) => {
         state.cat = ui.cat || 'jbib';
         document.querySelectorAll('[name=sex]').forEach((b) => { b.checked = ui.sexes.includes(b.value); });
         if (ui.thumb) $('thumb').value = ui.thumb;
+        state.kind = KINDS.includes(ui.kind) ? ui.kind : 'clothes';
+        state.groupByKind = ui.groupByKind || {};
+        state.groupsPicked = ui.groupsPicked || {};
     }
     document.querySelectorAll('[data-option]').forEach((g) => setSegment(g, state.opts[g.dataset.option]));
     setSegment($('sex-switch'), state.sex);

@@ -234,39 +234,45 @@ public sealed class Library
         return ytd;
     }
 
-    public void ResolveTextures(List<Mesh> meshes, IEnumerable<string> txdNames, int maxSize)
+    public void ResolveTextures(List<Mesh> meshes, IEnumerable<uint> txdHashes, int maxSize)
     {
-        var own = txdNames.Where(n => !string.IsNullOrEmpty(n)).Select(n => JenkHash.GenHash(n.ToLowerInvariant())).Distinct().ToList();
+        var own = txdHashes.Where(h => h != 0).Distinct().ToList();
         var loaded = new Dictionary<uint, YtdFile>();
         YtdFile Own(uint hash)
         {
             if (!loaded.TryGetValue(hash, out var ytd)) loaded[hash] = ytd = LoadYtd(hash, false);
             return ytd;
         }
-        foreach (var mesh in meshes)
+        CwTexture Find(CwTexture embedded, uint hash)
         {
-            if (mesh.Tex != null || mesh.Surface == Surface.Glass) continue;
-            var texture = mesh.Embedded;
-            if (texture == null && mesh.Diffuse != 0)
+            if (embedded != null || hash == 0) return embedded;
+            foreach (var txd in own)
             {
-                foreach (var txd in own)
+                var texture = Own(txd)?.TextureDict?.Lookup(hash);
+                if (texture != null) return texture;
+            }
+            foreach (var txd in own)
+            {
+                var parent = txd;
+                for (var depth = 0; depth < 8 && Parents.TryGetValue(parent, out parent); depth++)
                 {
-                    texture = Own(txd)?.TextureDict?.Lookup(mesh.Diffuse);
-                    if (texture != null) break;
-                }
-                foreach (var txd in own)
-                {
-                    if (texture != null) break;
-                    var parent = txd;
-                    for (var depth = 0; depth < 8 && texture == null && Parents.TryGetValue(parent, out parent); depth++)
-                    {
-                        texture = LoadYtd(parent, true)?.TextureDict?.Lookup(mesh.Diffuse);
-                    }
+                    var texture = LoadYtd(parent, true)?.TextureDict?.Lookup(hash);
+                    if (texture != null) return texture;
                 }
             }
-            if (texture == null) continue;
-            mesh.Tex = decoded.GetValue(texture, t => Assets3D.Decode(t, maxSize) ?? new Tex());
-            if (mesh.Tex.Rgba == null) mesh.Tex = null;
+            return null;
+        }
+        Tex Decode(CwTexture texture)
+        {
+            if (texture == null) return null;
+            var tex = decoded.GetValue(texture, t => Assets3D.Decode(t, maxSize) ?? new Tex());
+            return tex.Rgba == null ? null : tex;
+        }
+        foreach (var mesh in meshes)
+        {
+            if (mesh.Tint != 0) mesh.PaletteTex = Decode(Find(mesh.Palette, mesh.PaletteHash));
+            if (mesh.Tex != null || mesh.Surface == Surface.Glass) continue;
+            mesh.Tex = Decode(Find(mesh.Embedded, mesh.Diffuse));
         }
     }
 }

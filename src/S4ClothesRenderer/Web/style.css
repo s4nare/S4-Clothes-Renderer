@@ -248,3 +248,9 @@ input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height:
 .res-steps { margin: 10px 0 0; padding-left: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; color: var(--muted); font-size: 12px; }
 .res-cfg { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; padding: 8px 6px 8px 10px; border: 1px solid var(--line); border-radius: var(--r-xs); background: #00000059; }
 .res-cfg code { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); font: 11px/1.6 var(--mono); user-select: text; }
+.kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 10px; }
+.kinds button { height: 30px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg-raise); color: var(--muted); font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: background-color .15s, color .15s, border-color .15s; }
+.kinds button:hover { color: var(--ink); border-color: var(--line-strong); }
+.kinds button[aria-checked=true] { border-color: rgba(var(--accent-rgb), .55); background: rgba(var(--accent-rgb), .16); color: var(--ink); }
+.kinds button:disabled { opacity: .45; cursor: default; }
+body.objects .clothes-only, body:not(.objects) .objects-only { display: none !important; }

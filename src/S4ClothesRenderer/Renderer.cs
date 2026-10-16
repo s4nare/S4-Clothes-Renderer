@@ -190,6 +190,14 @@ public static class Renderer
                                 var u = w0 * m.Uvs[a * 2] + w1 * m.Uvs[b * 2] + w2 * m.Uvs[c * 2];
                                 var v = w0 * m.Uvs[a * 2 + 1] + w1 * m.Uvs[b * 2 + 1] + w2 * m.Uvs[c * 2 + 1];
                                 Sample(mtex, u, v, s);
+                                if (m.PaletteTex != null)
+                                {
+                                    var tu = m.Tint == 2 ? (MathF.Round(s[3]) - 32) / 128 : w0 * m.TintU[a] + w1 * m.TintU[b] + w2 * m.TintU[c];
+                                    var p = m.PaletteTex;
+                                    var o = Math.Clamp((int)(tu * p.Width), 0, p.Width - 1) * 4;
+                                    for (var k = 0; k < 3; k++) s[k] *= p.Rgba[o + k] / 255f;
+                                    if (m.Tint == 2) s[3] = 255;
+                                }
                                 if (alphaTest && s[3] < 90) continue;
                                 if (hairMesh) HairColor(s);
                             }
@@ -260,7 +268,6 @@ public readonly struct Camera
         View.Wrist => new Camera(Vector3.UnitX, -Vector3.UnitY, -Vector3.UnitZ),
         _ => new Camera(Vector3.UnitX, Vector3.UnitZ, -Vector3.UnitY),
     };
-}
 }
 
 public static class Png

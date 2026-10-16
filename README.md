@@ -4,11 +4,12 @@
 
 **FR** · [EN](#english)
 
-Génère une miniature PNG transparente pour chaque vêtement et accessoire GTA V (freemode homme et femme), directement depuis les fichiers du jeu et tes dossiers de vêtements addon. Pensé pour les serveurs FiveM : boutiques, menus de vestiaire, inventaires, sites web.
+Génère des miniatures PNG transparentes des vêtements (freemode homme et femme), véhicules, armes, props et peds de GTA V, directement depuis les fichiers du jeu et tes dossiers addon. Pensé pour les serveurs FiveM : boutiques, menus de vestiaire, inventaires, sites web.
 
 - Lit GTA V directement (Legacy et Enhanced) : aucune extraction à faire.
 - Ajoute tes dossiers `stream` de vêtements addon : à numéro égal, le dernier dossier remplace les précédents.
-- 16 catégories : masques, cheveux, bras, pantalons, sacs, chaussures, chaînes, sous-hauts, gilets, décalcomanies, hauts, chapeaux, lunettes, boucles d'oreilles, montres, bracelets.
+- Véhicules, armes, props et peds : jeu de base, DLC et dossiers addon/FiveM (`stream`), rangés par classe, type ou lettre.
+- 16 catégories de vêtements : masques, cheveux, bras, pantalons, sacs, chaussures, chaînes, sous-hauts, gilets, décalcomanies, hauts, chapeaux, lunettes, boucles d'oreilles, montres, bracelets.
 - Vue adaptée à chaque catégorie, cadrage automatique, couleur de cheveux naturelle, PNG transparents de 256 à 1024 px.
 - Numéros du jeu (`male/11/42.png`) grâce à la ressource `clothes_refs`, ou rangement par catégorie.
 - Une couleur ou toutes les variantes de texture (`42_0.png`, `42_1.png`…).
@@ -27,10 +28,9 @@ Windows 10/11 64 bits. Le runtime WebView2 (déjà présent sur Windows 11) est 
 
 Les vêtements DLC et addon sont numérotés par collection. Pour obtenir les numéros que FiveM utilise (`SetPedComponentVariation`) :
 
-1. Copie `clothes_refs` dans les ressources de ton serveur et ajoute `ensure clothes_refs`.
-2. Autorise la commande : `add_ace group.admin command.clothes_refs allow`.
-3. En jeu, tape `/clothes_refs` : le fichier `refs.json` est écrit dans le dossier de la ressource.
-4. Dans le logiciel, **Options › Importer** ce fichier, puis choisis **Numéros du jeu**.
+1. Dans **Rendu › Options**, choisis **Numéros du jeu**, puis **Installer sur mon serveur** et sélectionne le dossier `resources` de ton serveur.
+2. Ajoute les lignes affichées (bouton **Copier**) à ton `server.cfg` : `ensure clothes_refs` et `add_ace group.admin command.clothes_refs allow`.
+3. En jeu, tape `/clothes_refs` : `refs.json` est écrit dans la ressource et importé automatiquement par le logiciel.
 
 Refais `/clothes_refs` à chaque ajout ou retrait de vêtements sur le serveur.
 
@@ -51,11 +51,12 @@ dotnet publish src/S4ClothesRenderer/S4ClothesRenderer.csproj -c Release -o publ
 
 ## English
 
-Generates a transparent PNG thumbnail for every GTA V clothing item and prop (male and female freemode), straight from the game files and your addon clothing folders. Built for FiveM servers: shops, wardrobe menus, inventories, websites.
+Generates transparent PNG thumbnails of GTA V clothing (male and female freemode), vehicles, weapons, props and peds, straight from the game files and your addon folders. Built for FiveM servers: shops, wardrobe menus, inventories, websites.
 
 - Reads GTA V directly (Legacy and Enhanced): nothing to extract.
 - Add your addon clothing `stream` folders: for the same number, the last folder wins.
-- 16 categories: masks, hair, arms, pants, bags, shoes, chains, undershirts, armour, decals, tops, hats, glasses, earrings, watches, bracelets.
+- Vehicles, weapons, props and peds: base game, DLC and addon/FiveM `stream` folders, grouped by class, type or letter.
+- 16 clothing categories: masks, hair, arms, pants, bags, shoes, chains, undershirts, armour, decals, tops, hats, glasses, earrings, watches, bracelets.
 - Per-category camera, automatic framing, natural hair colour, transparent PNGs from 256 to 1024 px.
 - Game numbers (`male/11/42.png`) through the `clothes_refs` resource, or per-category layout.
 - First colour only or every texture variant (`42_0.png`, `42_1.png`…).
@@ -74,10 +75,9 @@ Windows 10/11 64-bit. The WebView2 runtime (built into Windows 11) is required.
 
 DLC and addon clothes are numbered per collection. To get the numbers FiveM uses (`SetPedComponentVariation`):
 
-1. Copy `clothes_refs` into your server resources and add `ensure clothes_refs`.
-2. Allow the command: `add_ace group.admin command.clothes_refs allow`.
-3. In game, type `/clothes_refs`: `refs.json` is written in the resource folder.
-4. In the app, **Options › Import** that file, then choose **Game numbers**.
+1. In **Render › Options**, choose **Game numbers**, then **Install on my server** and select your server `resources` folder.
+2. Add the lines shown (**Copy** button) to your `server.cfg`: `ensure clothes_refs` and `add_ace group.admin command.clothes_refs allow`.
+3. In game, type `/clothes_refs`: `refs.json` is written in the resource and imported automatically by the app.
 
 Run `/clothes_refs` again whenever clothes are added to or removed from the server.
 
