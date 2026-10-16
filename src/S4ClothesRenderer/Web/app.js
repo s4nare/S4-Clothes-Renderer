@@ -402,7 +402,7 @@ function renderEstimate() {
     });
     $('estimate').textContent = state.counts ? fmt(total) : '…';
     const color = all ? '_0' : '';
-    $('hint').textContent = state.opts.naming === 'game' ? 'male/11/0' + color + '.png' : 'male/11 - jackets/0' + color + '.png';
+    $('hint').textContent = state.opts.naming === 'game' ? 'male/11/0' + color + '.png' : 'male/torso2/0' + color + '.png';
 }
 
 function setRefs(on) {

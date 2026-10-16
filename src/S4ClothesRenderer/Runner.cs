@@ -266,7 +266,7 @@ public sealed class Runner
             foreach (var color in colors)
             {
                 var suffix = o.Colors == "all" ? "_" + (color.Letter - 'a') : "";
-                var folder = Path.Combine(it.Sex, comp.Slot + " - " + comp.Cat);
+                var folder = Path.Combine(it.Sex, comp.Folder);
                 var rel = o.Naming == "game" ? Path.Combine(it.Sex, comp.Slot, index + suffix + ".png")
                     : index != null ? Path.Combine(folder, index + suffix + ".png")
                     : Path.Combine(folder, it.Collection == "" ? "base" : it.Collection, it.Name + "_" + color.Letter + ".png");
