@@ -32,11 +32,31 @@ Rendu en direct : chaque image s'affiche dès qu'elle est écrite.
 
 Un PNG transparent par élément, une image par fichier :
 
-| `male/11/6.png` | `male/11/8.png` | `vehicles/adder.png` | `vehicles/champion.png` | `weapons/WEAPON_DOUBLEACTION.png` |
-|:-:|:-:|:-:|:-:|:-:|
-| <img src="docs/samples/jbib_006_a.png" width="140"> | <img src="docs/samples/jbib_008_a.png" width="140"> | <img src="docs/samples/adder.png" width="140"> | <img src="docs/samples/champion.png" width="140"> | <img src="docs/samples/WEAPON_DOUBLEACTION.png" width="140"> |
-| **`weapons/WEAPON_FLAREGUN.png`** | **`props/p_beefsplitter_s.png`** | **`props/p_bison_winch_s.png`** | **`peds/a_m_y_beach_01.png`** | **`peds/a_f_m_bevhills_01.png`** |
-| <img src="docs/samples/WEAPON_FLAREGUN.png" width="140"> | <img src="docs/samples/p_beefsplitter_s.png" width="140"> | <img src="docs/samples/p_bison_winch_s.png" width="140"> | <img src="docs/samples/a_m_y_beach_01.png" width="140"> | <img src="docs/samples/a_f_m_bevhills_01.png" width="140"> |
+**Vêtements · Homme**
+
+| Masques | Cheveux | Bras | Pantalons | Sacs | Chaussures | Chaînes | Sous-hauts |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/samples/clothes/male/masks.png" width="96"> | <img src="docs/samples/clothes/male/hair.png" width="96"> | <img src="docs/samples/clothes/male/arms.png" width="96"> | <img src="docs/samples/clothes/male/pants.png" width="96"> | <img src="docs/samples/clothes/male/bags.png" width="96"> | <img src="docs/samples/clothes/male/shoes.png" width="96"> | <img src="docs/samples/clothes/male/chains.png" width="96"> | <img src="docs/samples/clothes/male/undershirts.png" width="96"> |
+
+| Gilets | Décalcomanies | Hauts | Chapeaux | Lunettes | Boucles d’oreilles | Montres | Bracelets |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/samples/clothes/male/vests.png" width="96"> | <img src="docs/samples/clothes/male/decals.png" width="96"> | <img src="docs/samples/clothes/male/tops.png" width="96"> | <img src="docs/samples/clothes/male/hats.png" width="96"> | <img src="docs/samples/clothes/male/glasses.png" width="96"> | <img src="docs/samples/clothes/male/earrings.png" width="96"> | <img src="docs/samples/clothes/male/watches.png" width="96"> | <img src="docs/samples/clothes/male/bracelets.png" width="96"> |
+
+**Vêtements · Femme**
+
+| Masques | Cheveux | Bras | Pantalons | Sacs | Chaussures | Chaînes | Sous-hauts |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/samples/clothes/female/masks.png" width="96"> | <img src="docs/samples/clothes/female/hair.png" width="96"> | <img src="docs/samples/clothes/female/arms.png" width="96"> | <img src="docs/samples/clothes/female/pants.png" width="96"> | <img src="docs/samples/clothes/female/bags.png" width="96"> | <img src="docs/samples/clothes/female/shoes.png" width="96"> | <img src="docs/samples/clothes/female/chains.png" width="96"> | <img src="docs/samples/clothes/female/undershirts.png" width="96"> |
+
+| Gilets | Décalcomanies | Hauts | Chapeaux | Lunettes | Boucles d’oreilles | Montres | Bracelets |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/samples/clothes/female/vests.png" width="96"> | <img src="docs/samples/clothes/female/decals.png" width="96"> | <img src="docs/samples/clothes/female/tops.png" width="96"> | <img src="docs/samples/clothes/female/hats.png" width="96"> | <img src="docs/samples/clothes/female/glasses.png" width="96"> | <img src="docs/samples/clothes/female/earrings.png" width="96"> | <img src="docs/samples/clothes/female/watches.png" width="96"> | <img src="docs/samples/clothes/female/bracelets.png" width="96"> |
+
+**Véhicules · Armes · Props · Peds**
+
+| `vehicles/adder.png` | `vehicles/champion.png` | `weapons/WEAPON_DOUBLEACTION.png` | `weapons/WEAPON_FLAREGUN.png` | `props/p_beefsplitter_s.png` | `props/p_bison_winch_s.png` | `peds/a_m_y_beach_01.png` | `peds/a_f_m_bevhills_01.png` |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/samples/adder.png" width="96"> | <img src="docs/samples/champion.png" width="96"> | <img src="docs/samples/WEAPON_DOUBLEACTION.png" width="96"> | <img src="docs/samples/WEAPON_FLAREGUN.png" width="96"> | <img src="docs/samples/p_beefsplitter_s.png" width="96"> | <img src="docs/samples/p_bison_winch_s.png" width="96"> | <img src="docs/samples/a_m_y_beach_01.png" width="96"> | <img src="docs/samples/a_f_m_bevhills_01.png" width="96"> |
 
 ```
 sortie/
