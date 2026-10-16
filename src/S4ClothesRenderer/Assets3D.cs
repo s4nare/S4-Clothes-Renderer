@@ -22,6 +22,8 @@ public sealed class Mesh
     public uint PaletteHash;
     public CwTexture Palette;
     public Tex PaletteTex;
+    public int PaintSlot;
+    public float[] PaintColor;
 }
 
 public enum Surface
@@ -44,6 +46,7 @@ public static class Assets3D
     private static readonly HashSet<uint> HairShaders = Hashes("ped_hair_cutout_alpha", "ped_hair_spiked");
 
     private static readonly HashSet<uint> PaintShaders = Hashes([.. Enumerable.Range(1, 9).SelectMany(n => new[] { "", "_enveff", "_lvr", "_emissive" }.Select(s => "vehicle_paint" + n + s))]);
+    private static readonly HashSet<uint> SecondaryPaintShaders = Hashes([.. new[] { "", "_enveff", "_lvr", "_emissive" }.Select(s => "vehicle_paint2" + s)]);
     private static readonly HashSet<uint> GlassShaders = Hashes("vehicle_vehglass", "glass", "glass_pv", "glass_pv_env", "glass_env", "glass_spec", "glass_reflect", "glass_breakable", "glass_breakable_screendooralpha", "glass_displacement", "glass_emissive", "glass_emissivenight", "glass_emissive_alpha", "glass_emissivenight_alpha");
     private static readonly HashSet<uint> HiddenShaders = Hashes("vehicle_vehglass_inner", "vehicle_shadow", "shadow_proxy", "vehicle_blurredrotor");
     private const uint DiffuseSampler = 4059966321;
@@ -118,6 +121,7 @@ public static class Assets3D
             AlphaTest = geometry.Shader == null || geometry.Shader.RenderBucket != 0,
             Surface = Is(PaintShaders, geometry.Shader) ? Surface.Paint : Is(GlassShaders, geometry.Shader) ? Surface.Glass : Surface.Textured,
         };
+        mesh.PaintSlot = Is(SecondaryPaintShaders, geometry.Shader) ? 2 : 1;
         (mesh.Embedded, mesh.Diffuse) = Sampler(geometry.Shader, DiffuseSampler, embedded);
         var fileHash = geometry.Shader?.FileName.Hash ?? 0;
         mesh.Tint = fileHash is 3267631682 or 14185869 ? 1 : fileHash is 231364109 or 3294641629 or 731050667 ? 2 : 0;

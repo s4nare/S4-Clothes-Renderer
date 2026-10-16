@@ -130,6 +130,7 @@ public static class Renderer
     private static readonly float[] Paint = [228, 230, 234];
     private static readonly float[] Glass = [28, 34, 42];
     private const float GlassAlpha = 0.55f;
+    private const float HalfX = 0.167f, HalfY = 0.417f, HalfZ = 0.894f;
 
     private static void Raster(List<Mesh> meshes, Tex tex, Camera cam, bool hair, int r, float cx, float cy, float scale, float[] color, float[] depth)
     {
@@ -179,7 +180,8 @@ public static class Renderer
                             if (z <= depth[pi]) continue;
                             if (m.Surface == Surface.Paint)
                             {
-                                s[0] = Paint[0]; s[1] = Paint[1]; s[2] = Paint[2];
+                                var paint = m.PaintColor ?? Paint;
+                                s[0] = paint[0]; s[1] = paint[1]; s[2] = paint[2];
                             }
                             else if (m.Surface == Surface.Glass)
                             {
@@ -206,6 +208,7 @@ public static class Renderer
                                 s[0] = s[1] = s[2] = tex == null ? 150 : 200;
                             }
                             var light = 1f;
+                            float fresnel = 0, spec = 0, env = 0;
                             if (m.HasNormals)
                             {
                                 var nx = w0 * m.Normals[a * 3] + w1 * m.Normals[b * 3] + w2 * m.Normals[c * 3];
@@ -216,13 +219,34 @@ public static class Renderer
                                 var (vx, vy, vz) = cam.Project(nx / nl, ny / nl, nz / nl);
                                 var lambert = MathF.Max(0, -vx * 0.25f - vy * 0.35f + vz * 0.9f);
                                 light = vz < -0.05f ? 0.45f : 0.62f + 0.42f * lambert;
+                                if (m.Surface != Surface.Textured && vz > -0.05f)
+                                {
+                                    var facing = Math.Clamp(vz, 0, 1);
+                                    fresnel = MathF.Pow(1 - facing, 4);
+                                    spec = MathF.Pow(MathF.Max(0, -vx * HalfX - vy * HalfY + vz * HalfZ), 30);
+                                    light = 0.38f + 0.72f * MathF.Max(0, -vx * 0.3f - vy * 0.75f + vz * 0.6f);
+                                    var reflectY = 2 * facing * vy;
+                                    env = 30 + 215 * Math.Clamp(0.5f - reflectY * 2.5f, 0, 1);
+                                }
                             }
                             if (m.Surface == Surface.Glass)
                             {
+                                var alpha = Math.Min(0.92f, GlassAlpha + 0.35f * fresnel);
                                 var dstA = color[pi * 4 + 3] / 255f;
-                                var outA = GlassAlpha + dstA * (1 - GlassAlpha);
-                                for (var k = 0; k < 3; k++) color[pi * 4 + k] = (s[k] * light * GlassAlpha + color[pi * 4 + k] * dstA * (1 - GlassAlpha)) / outA;
+                                var outA = alpha + dstA * (1 - alpha);
+                                for (var k = 0; k < 3; k++)
+                                {
+                                    var glass = s[k] * light + env * (0.18f + 0.5f * fresnel) + spec * 255;
+                                    color[pi * 4 + k] = (Math.Min(255, glass) * alpha + color[pi * 4 + k] * dstA * (1 - alpha)) / outA;
+                                }
                                 color[pi * 4 + 3] = outA * 255;
+                                continue;
+                            }
+                            if (m.Surface == Surface.Paint)
+                            {
+                                depth[pi] = z;
+                                for (var k = 0; k < 3; k++) color[pi * 4 + k] = Math.Min(255, s[k] * light * (1 - 0.35f * fresnel) + env * (0.08f + 0.55f * fresnel) + spec * 205);
+                                color[pi * 4 + 3] = 255;
                                 continue;
                             }
                             depth[pi] = z;

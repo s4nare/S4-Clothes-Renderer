@@ -7,6 +7,7 @@ public sealed class Job
 {
     public ClothingItem Item;
     public ObjectItem Obj;
+    public int Paint = -1;
     public Library Lib;
     public FileRef Texture;
     public Component Comp;
@@ -167,11 +168,14 @@ public sealed class Runner
             c[1] += Math.Max(1, it.Colors.Count);
         }
         var objects = Objects.Kinds.ToDictionary(k => k, _ => new SortedDictionary<string, int>());
-        foreach (var it in ObjectsFor(o.UseGame, o.Folders).Items)
+        var paints = new SortedDictionary<string, int>();
+        var (lib, items) = ObjectsFor(o.UseGame, o.Folders);
+        foreach (var it in items)
         {
             objects[it.Kind][it.Group] = objects[it.Kind].GetValueOrDefault(it.Group) + 1;
+            if (it.Kind == "vehicles") paints[it.Group] = paints.GetValueOrDefault(it.Group) + Math.Max(1, lib.PaintCombos.GetValueOrDefault(it.Model)?.Count ?? 0);
         }
-        return new { counts, objects };
+        return new { counts, objects, paints };
     }
 
     private List<Job> ObjectJobs(JobOptions o)
@@ -180,11 +184,19 @@ public sealed class Runner
         var size = Sizes.Contains(o.Size) ? o.Size : 512;
         var kindOrder = Array.IndexOf(Objects.Kinds, o.Kind);
         return [.. items.Where(i => i.Kind == o.Kind && o.Groups.Contains(i.Group))
-            .Select(i => new Job
+            .SelectMany(i =>
             {
-                Obj = i, Lib = lib, Size = size, Out = Path.Combine(o.Out, i.Kind, string.Concat(i.Name.Split(Path.GetInvalidFileNameChars())) + ".png"),
-                Label = i.Name, Source = i.Label != i.Name && i.Label != "" ? i.Label : i.Group,
-                Sort = (2, kindOrder, 0, i.Group + "\u0001" + i.Name.ToLowerInvariant(), 0, 'a'),
+                var combos = i.Kind == "vehicles" ? lib.PaintCombos.GetValueOrDefault(i.Model)?.Count ?? 0 : 0;
+                var variants = o.Colors == "all" && combos > 0;
+                var paints = combos == 0 ? [-1] : variants ? Enumerable.Range(0, combos) : [Objects.DefaultPaint(lib, i.Model)];
+                var file = string.Concat(i.Name.Split(Path.GetInvalidFileNameChars()));
+                return paints.Select(p => new Job
+                {
+                    Obj = i, Lib = lib, Size = size, Paint = p,
+                    Out = Path.Combine(o.Out, i.Kind, file + (variants ? "_" + p : "") + ".png"),
+                    Label = variants ? i.Name + "_" + p : i.Name, Source = i.Label != i.Name && i.Label != "" ? i.Label : i.Group,
+                    Sort = (2, kindOrder, 0, i.Group + "\u0001" + i.Name.ToLowerInvariant(), Math.Max(p, 0), 'a'),
+                });
             })
             .OrderBy(j => j.Sort)];
     }
@@ -357,6 +369,7 @@ public sealed class Runner
                 if (job.Obj != null)
                 {
                     meshes = Objects.Scene(job.Obj, job.Lib, MaxTexture);
+                    Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
                     if (meshes.Count == 0) throw new InvalidDataException("no mesh");
                     rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false);
                 }

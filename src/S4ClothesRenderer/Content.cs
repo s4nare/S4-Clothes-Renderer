@@ -15,6 +15,8 @@ public sealed class ContentIndex
     public readonly List<FileRef> WeaponMetas = [];
     public readonly List<FileRef> Gtxds = [];
     public readonly List<FileRef> Ytyps = [];
+    public readonly List<FileRef> CarCols = [];
+    public readonly List<FileRef> CarVariations = [];
 
     public void Add(string fileName, FileRef file, int rank)
     {
@@ -38,9 +40,13 @@ public sealed class ContentIndex
                 if (name.StartsWith("vehicles")) VehicleMetas.Add(file);
                 else if (name.StartsWith("weapon")) WeaponMetas.Add(file);
                 else if (name == "gtxd.meta") Gtxds.Add(file);
+                else if (name.StartsWith("carcols")) CarCols.Add(file);
+                else if (name.StartsWith("carvariations")) CarVariations.Add(file);
                 break;
             case ".ymt":
                 if (name.EndsWith("gtxd.ymt")) Gtxds.Add(file);
+                else if (name.StartsWith("carcols")) CarCols.Add(file);
+                else if (name.StartsWith("carvariations")) CarVariations.Add(file);
                 break;
         }
     }
@@ -71,6 +77,8 @@ public sealed class Library
     public Dictionary<uint, uint> Parents { get; } = [];
     public List<VehicleDef> Vehicles { get; } = [];
     public List<WeaponDef> Weapons { get; } = [];
+    public uint[] PaintColors { get; private set; } = [];
+    public Dictionary<string, List<(byte Primary, byte Secondary)>> PaintCombos { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Library(params ContentIndex[] indexesByPriority)
     {
@@ -80,6 +88,8 @@ public sealed class Library
             foreach (var file in index.Gtxds) ReadGtxd(file);
             foreach (var file in index.VehicleMetas) ReadVehicles(file);
             foreach (var file in index.WeaponMetas) ReadWeapons(file);
+            foreach (var file in index.CarCols) ReadCarCols(file);
+            foreach (var file in index.CarVariations) ReadCarVariations(file);
         }
         DedupeByModel(Vehicles, v => v.Model);
         DedupeByModel(Weapons, w => w.Name);
@@ -163,6 +173,48 @@ public sealed class Library
             if (name == "" || model == "" || !name.StartsWith("WEAPON_", StringComparison.OrdinalIgnoreCase)) continue;
             Weapons.Add(new WeaponDef(name.ToUpperInvariant(), model));
         }
+    }
+
+    private static RpfFileEntry EntryOf(FileRef file) =>
+        file.Entry ?? new RpfBinaryFileEntry { Name = Path.GetFileName(file.Path), NameLower = Path.GetFileName(file.Path).ToLowerInvariant() };
+
+    private void ReadCarCols(FileRef file)
+    {
+        try
+        {
+            var carcols = new CarColsFile();
+            carcols.Load(file.Bytes(), EntryOf(file));
+            var colors = carcols.VehicleModelInfo?.Colors;
+            if (colors != null && colors.Length > PaintColors.Length) PaintColors = [.. colors.Select(c => c.color)];
+        }
+        catch
+        {
+        }
+    }
+
+    private void ReadCarVariations(FileRef file)
+    {
+        try
+        {
+            var variations = new CarVariationsFile();
+            variations.Load(file.Bytes(), EntryOf(file));
+            foreach (var v in variations.VehicleModelInfo?.variationData ?? [])
+            {
+                if (string.IsNullOrEmpty(v.modelName) || v.colors == null) continue;
+                var combos = v.colors.Where(c => c.indices != null && c.indices.Length >= 2).Select(c => (c.indices[0], c.indices[1])).Distinct().ToList();
+                if (combos.Count > 0) PaintCombos[v.modelName] = combos;
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    public float[] Paint(byte index)
+    {
+        if (index >= PaintColors.Length) return null;
+        var c = PaintColors[index];
+        return [(c >> 16) & 255, (c >> 8) & 255, c & 255];
     }
 
     private void ReadGtxd(FileRef file)

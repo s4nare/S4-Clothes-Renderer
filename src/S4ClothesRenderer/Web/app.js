@@ -46,6 +46,7 @@ function kindGroups() {
 
 function renderKinds() {
     document.body.classList.toggle('objects', isObjects());
+    document.body.classList.toggle('vehicles', state.kind === 'vehicles');
     document.querySelectorAll('[data-kinds]').forEach((box) => {
         box.innerHTML = '';
         box.classList.remove('open');
@@ -328,6 +329,7 @@ function sourcesChanged() {
     api('/api/scan', options()).then((r) => {
         state.counts = r.counts;
         state.objCounts = r.objects;
+        state.objPaints = r.paints;
         for (const k of KINDS.slice(1)) {
             const groups = Object.keys((r.objects || {})[k] || {});
             if (!groups.includes(state.groupByKind[k])) state.groupByKind[k] = groups[0] || '';
@@ -379,7 +381,7 @@ function renderGroupPicks() {
 
 function renderEstimate() {
     if (isObjects()) {
-        const counts = state.objCounts && state.objCounts[state.kind];
+        const counts = state.kind === 'vehicles' && state.opts.colors === 'all' ? state.objPaints : state.objCounts && state.objCounts[state.kind];
         let total = 0;
         document.querySelectorAll('[name=group]').forEach((box) => {
             const n = counts ? counts[box.value] || 0 : 0;

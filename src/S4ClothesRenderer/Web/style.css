@@ -292,4 +292,4 @@ body.maximized .edges { display: none; }
 .kind-menu button { height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-xs); background: none; color: var(--muted); font-size: 13px; font-weight: 600; text-align: left; transition: background-color .15s, color .15s; }
 .kind-menu button:hover { background: var(--surface-2); color: var(--ink); }
 .kind-menu button[aria-checked=true] { background: rgba(var(--accent-rgb), .16); color: var(--ink); }
-body.objects .clothes-only, body:not(.objects) .objects-only { display: none !important; }
+body.objects .clothes-only, body:not(.objects) .objects-only, body.objects:not(.vehicles) .paint-field { display: none !important; }

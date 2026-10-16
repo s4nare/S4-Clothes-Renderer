@@ -71,7 +71,7 @@ public static class Objects
         switch (item.Kind)
         {
             case "vehicles":
-                AddFragment(meshes, lib.Get(item.Model + ".yft").LoadFragment().Fragment);
+                AddFragment(meshes, (lib.Get(item.Model + "_hi.yft") ?? lib.Get(item.Model + ".yft")).LoadFragment().Fragment);
                 txds.AddRange([item.Model + "+hi", item.Txd, item.Model]);
                 break;
             case "peds":
@@ -89,6 +89,34 @@ public static class Objects
         }
         lib.ResolveTextures(meshes, txds.Where(n => !string.IsNullOrEmpty(n)).Select(n => JenkHash.GenHash(n.ToLowerInvariant())).Concat(txdHashes), maxTexture);
         return meshes;
+    }
+
+    public static int DefaultPaint(Library lib, string model)
+    {
+        if (!lib.PaintCombos.TryGetValue(model, out var combos)) return -1;
+        var best = 0;
+        var bestScore = float.MinValue;
+        for (var i = 0; i < combos.Count; i++)
+        {
+            var c = lib.Paint(combos[i].Primary);
+            if (c == null) continue;
+            var max = Math.Max(c[0], Math.Max(c[1], c[2]));
+            var min = Math.Min(c[0], Math.Min(c[1], c[2]));
+            var score = (max - min) / 255f + max / 510f;
+            if (score > bestScore) (best, bestScore) = (i, score);
+        }
+        return best;
+    }
+
+    public static void Paint(List<Mesh> meshes, Library lib, string model, int combo)
+    {
+        if (!lib.PaintCombos.TryGetValue(model, out var combos) || combo < 0 || combo >= combos.Count) return;
+        var (primary, secondary) = combos[combo];
+        var colors = new[] { lib.Paint(primary), lib.Paint(secondary) };
+        foreach (var m in meshes)
+        {
+            if (m.Surface == Surface.Paint) m.PaintColor = colors[m.PaintSlot == 2 ? 1 : 0] ?? colors[0];
+        }
     }
 
     private static void AddFragment(List<Mesh> meshes, FragType frag)

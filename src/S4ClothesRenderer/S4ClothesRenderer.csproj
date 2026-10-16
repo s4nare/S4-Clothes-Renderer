@@ -8,7 +8,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>S4ClothesRenderer</AssemblyName>
     <RootNamespace>S4ClothesRenderer</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Product>S4 Clothes Renderer</Product>
     <Company>s4na</Company>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>

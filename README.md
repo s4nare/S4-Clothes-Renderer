@@ -9,6 +9,7 @@ Génère des miniatures PNG transparentes des vêtements (freemode homme et femm
 - Lit GTA V directement (Legacy et Enhanced) : aucune extraction à faire.
 - Ajoute tes dossiers `stream` de vêtements addon : à numéro égal, le dernier dossier remplace les précédents.
 - Véhicules, armes, props et peds : jeu de base, DLC et dossiers addon/FiveM (`stream`), rangés par classe, type ou lettre.
+- Véhicules aux couleurs d'usine du jeu : une seule ou toutes les variantes (`adder_0.png`, `adder_1.png`…), carrosserie et vitres brillantes.
 - 16 catégories de vêtements : masques, cheveux, bras, pantalons, sacs, chaussures, chaînes, sous-hauts, gilets, décalcomanies, hauts, chapeaux, lunettes, boucles d'oreilles, montres, bracelets.
 - Vue adaptée à chaque catégorie, cadrage automatique, couleur de cheveux naturelle, PNG transparents de 256 à 1024 px.
 - Numéros du jeu (`male/11/42.png`) grâce à la ressource `clothes_refs`, ou rangement par catégorie.
@@ -21,7 +22,7 @@ Génère des miniatures PNG transparentes des vêtements (freemode homme et femm
 
 | Véhicules | Armes |
 |---|---|
-| ![Véhicules](docs/screens/vehicles.png) | ![Armes](docs/screens/weapons.png) |
+| ![Véhicules](docs/screens/vehicles-colors.png) | ![Armes](docs/screens/weapons.png) |
 | **Props** | **Peds** |
 | ![Props](docs/screens/props.png) | ![Peds](docs/screens/peds.png) |
 
@@ -109,6 +110,7 @@ Generates transparent PNG thumbnails of GTA V clothing (male and female freemode
 - Reads GTA V directly (Legacy and Enhanced): nothing to extract.
 - Add your addon clothing `stream` folders: for the same number, the last folder wins.
 - Vehicles, weapons, props and peds: base game, DLC and addon/FiveM `stream` folders, grouped by class, type or letter.
+- Vehicles in the game's factory colours: one or every variant (`adder_0.png`, `adder_1.png`…), glossy paint and glass.
 - 16 clothing categories: masks, hair, arms, pants, bags, shoes, chains, undershirts, armour, decals, tops, hats, glasses, earrings, watches, bracelets.
 - Per-category camera, automatic framing, natural hair colour, transparent PNGs from 256 to 1024 px.
 - Game numbers (`male/11/42.png`) through the `clothes_refs` resource, or per-category layout.
