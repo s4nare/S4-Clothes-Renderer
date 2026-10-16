@@ -1,0 +1,3 @@
+[submodule "vendor/CodeWalker"]
+	path = vendor/CodeWalker
+	url = https://github.com/dexyfex/CodeWalker

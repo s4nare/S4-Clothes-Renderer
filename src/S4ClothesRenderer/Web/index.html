@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>S4 Clothes Renderer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg style="display:none">
+    <symbol id="folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="download" viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+    <symbol id="stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+    <symbol id="spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></symbol>
+    <symbol id="list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 16l-5-5-8 8.5"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="hourglass" viewBox="0 0 24 24"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9"/></symbol>
+    <symbol id="copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="target"viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+</svg>
+
+<div class="sky"></div>
+<svg class="wave" viewBox="0 0 1600 400" preserveAspectRatio="none">
+    <defs>
+        <linearGradient id="wv1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color: rgb(var(--accent-rgb)); stop-opacity: .05"/><stop offset=".6" style="stop-color: rgb(var(--accent-rgb)); stop-opacity: .22"/><stop offset="1" style="stop-color: rgb(var(--accent-rgb)); stop-opacity: .1"/></linearGradient>
+        <linearGradient id="wv2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".55" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#fff" stop-opacity=".2"/></linearGradient>
+    </defs>
+    <path d="M0 260 C 300 230 500 300 800 250 S 1300 150 1600 200 L 1600 400 L 0 400 Z" fill="url(#wv1)"/>
+    <path d="M0 300 C 350 330 600 330 900 290 S 1350 230 1600 270" fill="none" stroke="url(#wv2)" stroke-width="1.5"/>
+</svg>
+
+<div class="shell">
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-logo"><img id="logo" src="/logo" alt=""></div>
+            <div><div class="brand-name" id="brand-name">S4 Clothes Renderer</div><div class="brand-sub" data-i18n="app.sub"></div></div>
+        </div>
+        <nav class="navbar">
+            <button class="nav-link active" data-view="gallery"><svg class="i"><use href="#grid"/></svg><span data-i18n="nav.gallery"></span></button>
+            <button class="nav-link" data-view="render"><svg class="i"><use href="#spark"/></svg><span data-i18n="nav.render"></span></button>
+            <span class="nav-divider"></span>
+            <button class="nav-link" id="journal-btn"><svg class="i"><use href="#list"/></svg><span data-i18n="nav.log"></span><span class="nav-badge" id="badge"></span></button>
+        </nav>
+        <div class="top-right">
+            <div class="run-chip" id="run-chip"><i></i><b id="chip-count"></b><div class="mini"><div id="chip-bar"></div></div><span id="chip-eta"></span></div>
+            <div class="segmented lang" id="lang"><button data-value="fr">FR</button><button data-value="en">EN</button></div>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <section class="view on" id="view-gallery">
+            <aside class="sidebar">
+                <div class="side-head">
+                    <div class="segmented block" id="sex-switch">
+                        <button data-sex="male" aria-checked="true" data-i18n="sex.male"></button>
+                        <button data-sex="female" aria-checked="false" data-i18n="sex.female"></button>
+                    </div>
+                </div>
+                <div class="side-scroll">
+                    <div class="side-title" data-i18n="group.clothes"></div>
+                    <div id="nav-cloth"></div>
+                    <div class="side-title" data-i18n="group.props"></div>
+                    <div id="nav-prop"></div>
+                </div>
+            </aside>
+            <div class="content">
+                <div class="page-head">
+                    <div class="grow">
+                        <h1 class="page-title" id="cat-title">—</h1>
+                        <div class="page-sub" id="cat-sub"></div>
+                    </div>
+                    <button class="btn primary" id="render-cat"><svg class="i fill"><use href="#play"/></svg><span data-i18n="gallery.render"></span></button>
+                </div>
+                <div class="progress-line"><div id="cat-bar"></div></div>
+                <div class="toolbar">
+                    <div class="segmented" id="filter">
+                        <button data-filter="all" aria-checked="true" data-i18n="filter.all"></button>
+                        <button data-filter="done" aria-checked="false" data-i18n="filter.done"></button>
+                        <button data-filter="todo" aria-checked="false" data-i18n="filter.todo"></button>
+                    </div>
+                    <label class="search"><svg class="i"><use href="#search"/></svg><input id="find" spellcheck="false" data-i18n-placeholder="gallery.find"></label>
+                    <div class="grow"></div>
+                    <div class="zoom-ctl"><svg class="i"><use href="#image"/></svg><input type="range" id="thumb" min="100" max="300" value="150"></div>
+                </div>
+                <div class="grid" id="gallery"></div>
+            </div>
+        </section>
+
+        <section class="view" id="view-render">
+            <div class="settings">
+                <div class="settings-scroll">
+                    <div class="card">
+                        <div class="card-head"><span class="num">1</span><h3 data-i18n="src.title"></h3></div>
+                        <div class="game-row" id="game-row">
+                            <span class="box" id="game-toggle"></span>
+                            <div class="txt"><b data-i18n="src.game"></b><span id="game-status"></span></div>
+                            <span class="spin" id="game-spin"></span>
+                            <button class="icon-btn" id="game-detect" data-i18n-title="src.detect"><svg class="i"><use href="#target"/></svg></button>
+                            <button class="icon-btn" id="game-pick" data-i18n-title="src.pickGame"><svg class="i"><use href="#folder"/></svg></button>
+                        </div>
+                        <div id="sources"></div>
+                        <div class="row-btns">
+                            <button class="btn small" id="add-src"><svg class="i"><use href="#plus"/></svg><span data-i18n="src.add"></span></button>
+                        </div>
+                        <div class="hint" data-i18n="src.hint"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head"><span class="num">2</span><h3 data-i18n="cats.title"></h3>
+                            <div class="act"><button class="link" data-all="1" data-i18n="cats.all"></button><button class="link" data-all="0" data-i18n="cats.none"></button></div>
+                        </div>
+                        <div class="chips">
+                            <label class="chip-check"><input type="checkbox" name="sex" value="male" checked><span class="box"></span><span class="lbl" data-i18n="sex.male"></span></label>
+                            <label class="chip-check"><input type="checkbox" name="sex" value="female" checked><span class="box"></span><span class="lbl" data-i18n="sex.female"></span></label>
+                        </div>
+                        <div class="sub-title" data-i18n="group.clothes"></div>
+                        <div class="chips" id="pick-cloth"></div>
+                        <div class="sub-title" data-i18n="group.props"></div>
+                        <div class="chips" id="pick-prop"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head"><span class="num">3</span><h3 data-i18n="opt.title"></h3></div>
+                        <div class="field"><span class="field-label" data-i18n="opt.colors"></span>
+                            <div class="segmented block" data-option="colors"><button data-value="first" data-i18n="opt.colorsFirst"></button><button data-value="all" data-i18n="opt.colorsAll"></button></div>
+                        </div>
+                        <div class="field"><span class="field-label" data-i18n="opt.naming"></span>
+                            <div class="segmented block" data-option="naming"><button data-value="cat" data-i18n="opt.namingCat"></button><button data-value="game" data-i18n="opt.namingGame"></button></div>
+                            <div class="hint" id="hint"></div>
+                            <div class="refs-row" id="refs-row"><i class="dot"></i><span id="refs-text"></span><button class="btn small" id="refs-import"><svg class="i"><use href="#download"/></svg><span data-i18n="refs.import"></span></button></div>
+                            <div class="res-box" id="res-box">
+                                <div class="res-head"><span id="res-text"></span><button class="btn small" id="res-install"><svg class="i"><use href="#download"/></svg><span data-i18n="res.install"></span></button></div>
+                                <ol class="res-steps">
+                                    <li><span data-i18n="res.step1"></span><div class="res-cfg"><code id="res-cfg">ensure clothes_refs
+add_ace group.admin command.clothes_refs allow</code><button class="icon-btn" id="res-copy" data-i18n-title="res.copy"><svg class="i"><use href="#copy"/></svg></button></div></li>
+                                    <li data-i18n="res.step2"></li>
+                                    <li data-i18n="res.step3"></li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="field"><span class="field-label" data-i18n="opt.size"></span>
+                            <div class="segmented block" data-option="size"><button data-value="256">256 px</button><button data-value="512">512 px</button><button data-value="1024">1024 px</button></div>
+                        </div>
+                        <div class="field"><span class="field-label" data-i18n="opt.existing"></span>
+                            <div class="segmented block" data-option="force"><button data-value="false" data-i18n="opt.keep"></button><button data-value="true" data-i18n="opt.redo"></button></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head"><span class="num">4</span><h3 data-i18n="out.title"></h3>
+                            <div class="act"><button class="link" id="open" data-i18n="out.open"></button></div>
+                        </div>
+                        <div class="out-row"><input id="out" spellcheck="false"><button class="btn small" id="pick"><svg class="i"><use href="#folder"/></svg></button></div>
+                    </div>
+                </div>
+                <div class="settings-foot">
+                    <div class="sum"><span data-i18n="run.toRender"></span><b id="estimate">…</b></div>
+                    <button class="btn primary wide" id="go"></button>
+                </div>
+            </div>
+            <div class="live">
+                <div class="stats">
+                    <div class="stats-top"><div class="big" id="count">0 <span>/ 0</span></div><div class="pct" id="pct"></div><div class="cur" id="current"></div></div>
+                    <div class="bar"><div id="bar"></div></div>
+                    <div class="kpis">
+                        <div class="kpi"><span data-i18n="kpi.done"></span><b id="k-done">0</b></div>
+                        <div class="kpi"><span data-i18n="kpi.skipped"></span><b id="k-skip">0</b></div>
+                        <div class="kpi" id="k-fail-box"><span data-i18n="kpi.failed"></span><b id="k-fail">0</b></div>
+                        <div class="kpi"><span data-i18n="kpi.speed"></span><b id="k-speed">—</b></div>
+                        <div class="kpi"><span id="k-time-label"></span><b id="k-time">—</b></div>
+                    </div>
+                </div>
+                <div class="live-head"><h3 data-i18n="live.title"></h3><span data-i18n="live.sub"></span></div>
+                <div class="grid" id="live"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="drawer" id="journal">
+    <header><h3 data-i18n="nav.log"></h3><button class="link" id="journal-clear" data-i18n="log.clear"></button><button class="icon-btn" id="journal-close"><svg class="i"><use href="#x"/></svg></button></header>
+    <pre id="log"></pre>
+</div>
+
+<div class="lightbox" id="lightbox">
+    <button class="nav prev" id="lb-prev"><svg class="i"><use href="#left"/></svg></button>
+    <figure><img alt=""><figcaption><b></b><span></span></figcaption></figure>
+    <button class="nav next" id="lb-next"><svg class="i"><use href="#right"/></svg></button>
+    <button class="nav close" id="lb-close"><svg class="i"><use href="#x"/></svg></button>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+const I18N = {
+    fr: {
+        'app.sub': 'Rendu des vêtements',
+        'nav.gallery': 'Galerie', 'nav.render': 'Rendu', 'nav.log': 'Journal',
+        'sex.male': 'Homme', 'sex.female': 'Femme',
+        'group.clothes': 'Vêtements', 'group.props': 'Props',
+        'gallery.render': 'Rendre cette catégorie', 'gallery.find': 'Numéro…', 'gallery.component': 'Composante {slot}',
+        'gallery.images': '{n} image(s)', 'gallery.rendered': '{n} rendue(s)', 'gallery.todo': 'À rendre',
+        'gallery.empty': 'Aucun vêtement trouvé pour cette catégorie dans les sources.', 'gallery.noMatch': 'Rien ne correspond au filtre.',
+        'gallery.settings': 'Ouvrir les réglages', 'gallery.loadingGame': 'Lecture des fichiers de GTA V…',
+        'filter.all': 'Tous', 'filter.done': 'Rendus', 'filter.todo': 'À faire',
+        'src.title': 'Sources', 'src.game': 'GTA V (fichiers du jeu)', 'src.detect': 'Détecter GTA V', 'src.pickGame': 'Choisir le dossier de GTA V',
+        'src.add': 'Ajouter un dossier', 'src.none': 'Aucun dossier ajouté (vêtements addon, streams…).', 'src.remove': 'Retirer',
+        'src.hint': 'Ordre : le jeu, puis les dossiers. À numéro égal, le dernier remplace les précédents.',
+        'game.notFound': 'GTA V introuvable : choisis son dossier.', 'game.invalid': 'Ce dossier ne contient pas GTA5.exe.',
+        'game.loading': 'Lecture… {status}', 'game.loaded': '{n} fichiers · {path}', 'game.idle': '{path}', 'game.error': 'Erreur : {error}',
+        'cats.title': 'Catégories', 'cats.all': 'Tout', 'cats.none': 'Aucune',
+        'opt.title': 'Options', 'opt.colors': 'Couleurs', 'opt.colorsFirst': 'La première', 'opt.colorsAll': 'Toutes',
+        'opt.naming': 'Noms des fichiers', 'opt.namingCat': 'Par catégorie', 'opt.namingGame': 'Numéros du jeu',
+        'opt.size': 'Taille des images', 'opt.existing': 'Images déjà présentes', 'opt.keep': 'Les garder', 'opt.redo': 'Les refaire',
+        'refs.ok': 'refs.json présent : numéros du jeu connus.', 'refs.missing': 'refs.json absent : numéros par collection.',
+        'refs.import': 'Importer', 'refs.imported': 'refs.json importé.',
+        'res.install': 'Installer sur mon serveur', 'res.none': 'Ressource FiveM clothes_refs non installée.', 'res.installed': 'Installée : {path}',
+        'res.pick': 'Choisis le dossier resources de ton serveur.', 'res.done': 'clothes_refs installée dans {path}', 'res.copy': 'Copier', 'res.copied': 'Copié.',
+        'res.step1': 'Ajoute ces lignes à ton server.cfg, puis redémarre le serveur :',
+        'res.step2': 'En jeu, tape /clothes_refs.',
+        'res.step3': 'Le refs.json créé est importé tout seul ici, puis choisis « Numéros du jeu ».',
+        'err.resource_folder': 'Dossier introuvable.',
+        'out.title': 'Dossier de sortie', 'out.open': 'Ouvrir',
+        'run.toRender': 'Images à rendre', 'run.start': 'Lancer le rendu', 'run.stop': 'Arrêter le rendu',
+        'run.started': 'Rendu lancé : {n} image(s).', 'run.nothing': 'Rien à faire : toutes les images existent déjà. Choisis « Les refaire » pour les recalculer.',
+        'run.finished': 'Rendu terminé.', 'run.pickOne': 'Choisis au moins un sexe et une catégorie.', 'run.inProgress': 'Rendu en cours…',
+        'kpi.done': 'Rendues', 'kpi.skipped': 'Déjà faites', 'kpi.failed': 'Échecs', 'kpi.speed': 'Vitesse', 'kpi.left': 'Temps restant', 'kpi.duration': 'Durée',
+        'live.title': 'En direct', 'live.sub': 'Les dernières images rendues, dans l’ordre.', 'live.empty': 'Lance un rendu : les images arriveront ici, dans l’ordre.',
+        'log.clear': 'Vider', 'log.empty': 'Aucun message pour l’instant.',
+        'log.failed': 'échec {label} : {message}',
+        'log.unknown_skipped': '{n} vêtement(s) d’une collection absente de refs.json ignoré(s) : refais /clothes_refs en jeu.',
+        'log.unknown_sorted': '{n} vêtement(s) d’une collection absente de refs.json rangé(s) par collection : refais /clothes_refs en jeu.',
+        'err.refs_missing': 'refs.json introuvable : en jeu, tape /clothes_refs puis importe le fichier, ou choisis « Par catégorie ».',
+        'err.refs_invalid': 'Ce fichier n’est pas un refs.json valide.', 'err.busy': 'Un rendu est déjà en cours.',
+        'err.no_output': 'Choisis un dossier de sortie.', 'err.game_loading': 'Attends la fin de la lecture de GTA V.',
+        'cat.berd': 'Masques', 'cat.hair': 'Cheveux', 'cat.uppr': 'Bras', 'cat.lowr': 'Pantalons', 'cat.hand': 'Sacs et parachutes',
+        'cat.feet': 'Chaussures', 'cat.teef': 'Chaînes et accessoires', 'cat.accs': 'Sous-hauts', 'cat.task': 'Gilets pare-balles',
+        'cat.decl': 'Décalcomanies', 'cat.jbib': 'Hauts', 'cat.p_head': 'Chapeaux', 'cat.p_eyes': 'Lunettes', 'cat.p_ears': 'Boucles d’oreilles',
+        'cat.p_lwrist': 'Montres', 'cat.p_rwrist': 'Bracelets',
+    },
+    en: {
+        'app.sub': 'Clothing renderer',
+        'nav.gallery': 'Gallery', 'nav.render': 'Render', 'nav.log': 'Log',
+        'sex.male': 'Male', 'sex.female': 'Female',
+        'group.clothes': 'Clothes', 'group.props': 'Props',
+        'gallery.render': 'Render this category', 'gallery.find': 'Number…', 'gallery.component': 'Component {slot}',
+        'gallery.images': '{n} image(s)', 'gallery.rendered': '{n} rendered', 'gallery.todo': 'To render',
+        'gallery.empty': 'No clothing found for this category in the sources.', 'gallery.noMatch': 'Nothing matches the filter.',
+        'gallery.settings': 'Open settings', 'gallery.loadingGame': 'Reading GTA V files…',
+        'filter.all': 'All', 'filter.done': 'Rendered', 'filter.todo': 'To do',
+        'src.title': 'Sources', 'src.game': 'GTA V (game files)', 'src.detect': 'Detect GTA V', 'src.pickGame': 'Choose the GTA V folder',
+        'src.add': 'Add a folder', 'src.none': 'No folder added (addon clothes, streams…).', 'src.remove': 'Remove',
+        'src.hint': 'Order: the game, then the folders. For the same number, the last one wins.',
+        'game.notFound': 'GTA V not found: choose its folder.', 'game.invalid': 'This folder does not contain GTA5.exe.',
+        'game.loading': 'Reading… {status}', 'game.loaded': '{n} files · {path}', 'game.idle': '{path}', 'game.error': 'Error: {error}',
+        'cats.title': 'Categories', 'cats.all': 'All', 'cats.none': 'None',
+        'opt.title': 'Options', 'opt.colors': 'Colours', 'opt.colorsFirst': 'First only', 'opt.colorsAll': 'All',
+        'opt.naming': 'File names', 'opt.namingCat': 'By category', 'opt.namingGame': 'Game numbers',
+        'opt.size': 'Image size', 'opt.existing': 'Existing images', 'opt.keep': 'Keep them', 'opt.redo': 'Redo them',
+        'refs.ok': 'refs.json found: game numbers known.', 'refs.missing': 'refs.json missing: numbered per collection.',
+        'refs.import': 'Import', 'refs.imported': 'refs.json imported.',
+        'res.install': 'Install on my server', 'res.none': 'FiveM resource clothes_refs not installed.', 'res.installed': 'Installed: {path}',
+        'res.pick': 'Choose your server resources folder.', 'res.done': 'clothes_refs installed in {path}', 'res.copy': 'Copy', 'res.copied': 'Copied.',
+        'res.step1': 'Add these lines to your server.cfg, then restart the server:',
+        'res.step2': 'In game, type /clothes_refs.',
+        'res.step3': 'The generated refs.json is imported here automatically, then choose “Game numbers”.',
+        'err.resource_folder': 'Folder not found.',
+        'out.title': 'Output folder', 'out.open': 'Open',
+        'run.toRender': 'Images to render', 'run.start': 'Start rendering', 'run.stop': 'Stop rendering',
+        'run.started': 'Rendering started: {n} image(s).', 'run.nothing': 'Nothing to do: every image already exists. Choose “Redo them” to render again.',
+        'run.finished': 'Rendering finished.', 'run.pickOne': 'Pick at least one sex and one category.', 'run.inProgress': 'Rendering…',
+        'kpi.done': 'Rendered', 'kpi.skipped': 'Already done', 'kpi.failed': 'Failed', 'kpi.speed': 'Speed', 'kpi.left': 'Time left', 'kpi.duration': 'Duration',
+        'live.title': 'Live', 'live.sub': 'The latest rendered images, in order.', 'live.empty': 'Start a render: images will show up here, in order.',
+        'log.clear': 'Clear', 'log.empty': 'No message yet.',
+        'log.failed': 'failed {label}: {message}',
+        'log.unknown_skipped': '{n} item(s) from a collection missing in refs.json skipped: run /clothes_refs again in game.',
+        'log.unknown_sorted': '{n} item(s) from a collection missing in refs.json sorted by collection: run /clothes_refs again in game.',
+        'err.refs_missing': 'refs.json not found: run /clothes_refs in game and import the file, or choose “By category”.',
+        'err.refs_invalid': 'This file is not a valid refs.json.', 'err.busy': 'A render is already running.',
+        'err.no_output': 'Choose an output folder.', 'err.game_loading': 'Wait until GTA V files are read.',
+        'cat.berd': 'Masks', 'cat.hair': 'Hair', 'cat.uppr': 'Arms', 'cat.lowr': 'Pants', 'cat.hand': 'Bags & parachutes',
+        'cat.feet': 'Shoes', 'cat.teef': 'Chains & accessories', 'cat.accs': 'Undershirts', 'cat.task': 'Body armour',
+        'cat.decl': 'Decals', 'cat.jbib': 'Tops', 'cat.p_head': 'Hats', 'cat.p_eyes': 'Glasses', 'cat.p_ears': 'Earrings',
+        'cat.p_lwrist': 'Watches', 'cat.p_rwrist': 'Bracelets',
+    },
+};
+
+let LANG = 'fr';
+
+function t(key, vars) {
+    let text = (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+    for (const k in vars || {}) text = text.split('{' + k + '}').join(vars[k]);
+    return text;
+}
+
+function applyI18n() {
+    document.documentElement.lang = LANG;
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+    document.getElementById('log').dataset.empty = t('log.empty');
+}
