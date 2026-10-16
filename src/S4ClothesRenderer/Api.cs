@@ -26,6 +26,7 @@ public sealed class Api
     private readonly Func<string, string> pickFile;
     private readonly Action<string, object> send;
     private FileSystemWatcher watcher;
+    private FolderWatch sources;
     private readonly Updater updater;
     public Runner Runner { get; }
 
@@ -40,6 +41,7 @@ public sealed class Api
         this.send = send;
         SyncRefs();
         Watch();
+        WatchSources();
         updater = new Updater(send);
         _ = Task.Run(() => updater.Run(settings));
     }
@@ -126,13 +128,16 @@ public sealed class Api
         if (next == null) return new { };
         settings.UseGame = next.UseGame;
         settings.GamePath = next.GamePath ?? "";
+        var folders = settings.Folders;
         settings.Folders = [.. (next.Folders ?? []).Where(f => !string.IsNullOrWhiteSpace(f)).Distinct(StringComparer.OrdinalIgnoreCase)];
+        if (!folders.SequenceEqual(settings.Folders, StringComparer.OrdinalIgnoreCase)) WatchSources();
         settings.Out = next.Out ?? "";
         settings.Naming = next.Naming == "game" ? "game" : "cat";
         settings.Colors = next.Colors == "all" ? "all" : "first";
         settings.Size = next.Size;
         settings.Force = next.Force;
         settings.Head = next.Head;
+        settings.Pose = next.Pose == "down" ? "down" : "files";
         settings.Lang = next.Lang ?? "";
         settings.Save();
         SyncRefs();
@@ -201,6 +206,16 @@ public sealed class Api
         watcher.Changed += changed;
         watcher.Created += changed;
         watcher.EnableRaisingEvents = true;
+    }
+
+    private void WatchSources()
+    {
+        sources?.Dispose();
+        sources = new FolderWatch(settings.Folders, () =>
+        {
+            Runner.Invalidate();
+            send("sources", new { });
+        });
     }
 
     private object LoadGame(JsonElement json)
