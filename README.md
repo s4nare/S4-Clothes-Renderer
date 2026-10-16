@@ -1,6 +1,6 @@
 # S4 Clothes Renderer
 
-![Gallery](docs/gallery.png)
+![Gallery](docs/screens/gallery.png)
 
 **FR** · [EN](#english)
 
@@ -21,13 +21,13 @@ Génère des miniatures PNG transparentes des vêtements (freemode homme et femm
 
 | Véhicules | Armes |
 |---|---|
-| ![Véhicules](docs/vehicles.png) | ![Armes](docs/weapons.png) |
+| ![Véhicules](docs/screens/vehicles.png) | ![Armes](docs/screens/weapons.png) |
 | **Props** | **Peds** |
-| ![Props](docs/props.png) | ![Peds](docs/peds.png) |
+| ![Props](docs/screens/props.png) | ![Peds](docs/screens/peds.png) |
 
 Rendu en direct : chaque image s'affiche dès qu'elle est écrite.
 
-![Rendu](docs/render.png)
+![Rendu](docs/screens/render.png)
 
 ## Images produites
 
