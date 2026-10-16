@@ -15,6 +15,7 @@ Génère des miniatures PNG transparentes des vêtements (freemode homme et femm
 - Une couleur ou toutes les variantes de texture (`42_0.png`, `42_1.png`…).
 - Galerie par catégorie, rendu en direct, reprise là où tu t'étais arrêté.
 - Rendu logiciel multi-cœur : plus de 100 images par seconde sur un CPU récent.
+- Mise à jour automatique au démarrage, avec les nouveautés affichées dans le logiciel.
 
 ## Captures
 
@@ -114,6 +115,7 @@ Generates transparent PNG thumbnails of GTA V clothing (male and female freemode
 - First colour only or every texture variant (`42_0.png`, `42_1.png`…).
 - Per-category gallery, live progress, resumes where you left off.
 - Multi-core software renderer: over 100 images per second on a recent CPU.
+- Automatic updates on startup, with release notes shown in the app.
 
 Screenshots and sample output: see [Captures](#captures) and [Images produites](#images-produites) above. One transparent PNG per item: `male/11/42.png`, `vehicles/adder.png`, `weapons/WEAPON_PISTOL.png`, `props/prop_bin_01a.png`, `peds/a_m_y_beach_01.png`.
 

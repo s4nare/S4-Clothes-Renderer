@@ -416,6 +416,7 @@ function setRunning(on) {
     $('run-chip').classList.toggle('on', on);
     renderKinds();
     $('render-cat').disabled = on || !state.items.length;
+    renderUpdate();
 }
 
 let lastProgress = null;
@@ -519,6 +520,7 @@ function setLang(lang) {
     if (lastProgress) showProgress(lastProgress);
     else $('k-time-label').textContent = t('kpi.left');
     if ($('live').querySelector('.empty')) emptyState($('live'), 'spark', t(state.running ? 'run.inProgress' : 'live.empty'));
+    renderUpdate();
 }
 
 document.querySelectorAll('.nav-link[data-view]').forEach((b) => b.onclick = () => setView(b.dataset.view));
@@ -635,7 +637,58 @@ $('go').onclick = () => {
 };
 $('render-cat').onclick = () => start({ ...options(), sexes: [state.sex], cats: [state.cat], groups: [state.groupByKind[state.kind] || ''] });
 
+function markdown(text) {
+    const esc = (v) => v.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const inline = (v) => esc(v).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+    let html = '', list = false;
+    for (const raw of text.replace(/\r/g, '').split('\n')) {
+        const line = raw.trim();
+        const item = /^[-*] (.*)/.exec(line);
+        if (list && !item) { html += '</ul>'; list = false; }
+        if (item) { if (!list) { html += '<ul>'; list = true; } html += '<li>' + inline(item[1]) + '</li>'; }
+        else if (/^#+ /.test(line)) html += '<h4>' + inline(line.replace(/^#+ /, '')) + '</h4>';
+        else if (line) html += '<p>' + inline(line) + '</p>';
+    }
+    return html + (list ? '</ul>' : '');
+}
+
+function notesFor(text) {
+    const parts = (text || '').split(/^## (FR|EN)\s*$/m);
+    if (parts.length < 3) return text || '';
+    const i = parts.indexOf(LANG.toUpperCase());
+    return (i > 0 ? parts[i + 1] : parts[2]).trim();
+}
+
+function renderUpdate() {
+    const u = state.update;
+    $('update').classList.toggle('on', !!u && !state.updateHidden);
+    if (!u) return;
+    $('upd-title').textContent = t(u.state === 'installed' ? 'upd.installed' : 'upd.available', { version: 'v' + u.version });
+    $('upd-state').textContent = u.state === 'installed' ? '' : t(state.running && u.state === 'ready' ? 'upd.busy' : 'upd.' + u.state);
+    $('upd-notes').innerHTML = markdown(notesFor(u.notes));
+    const go = { ready: 'upd.restart', manual: 'upd.page', downloading: 'upd.downloading' }[u.state];
+    $('upd-go').textContent = go ? t(go) : '';
+    $('upd-go').disabled = u.state === 'downloading' || (u.state === 'ready' && state.running);
+    $('upd-later').textContent = t(u.state === 'installed' ? 'upd.close' : 'upd.later');
+}
+
+function setUpdate(u) {
+    if (!state.update || state.update.state !== u.state) state.updateHidden = false;
+    state.update = u;
+    renderUpdate();
+}
+
+const hideUpdate = () => { state.updateHidden = true; renderUpdate(); };
+$('upd-close').onclick = hideUpdate;
+$('upd-later').onclick = hideUpdate;
+$('upd-go').onclick = () => {
+    const u = state.update;
+    if (u.state === 'manual') window.open(u.url);
+    else if (u.state === 'ready') api('/api/restart');
+};
+
 const handlers = {
+    update: setUpdate,
     progress: showProgress,
     image: onImage,
     log: (m) => log(t('log.' + m.key, m), m.key === 'failed'),
@@ -666,6 +719,7 @@ window.chrome.webview.addEventListener('message', (e) => {
 fetch('/api/state').then((r) => r.json()).then((st) => {
     const s = st.settings;
     applyBranding(st.branding);
+    $('version').textContent = 'v' + st.version;
     state.categories = st.categories;
     state.folders = s.folders || [];
     state.useGame = s.useGame;
@@ -694,4 +748,5 @@ fetch('/api/state').then((r) => r.json()).then((st) => {
         showProgress(st.progress);
         if (!st.progress.finished) setRunning(true);
     }
+    if (st.update) setUpdate(st.update);
 });

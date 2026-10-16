@@ -26,6 +26,7 @@ public sealed class Api
     private readonly Func<string, string> pickFile;
     private readonly Action<string, object> send;
     private FileSystemWatcher watcher;
+    private readonly Updater updater;
     public Runner Runner { get; }
 
     public Api(Action<string, object> send, Func<Func<string>, string> onUi, Func<string, bool, string> pickFolder, Func<string, string> pickFile)
@@ -39,6 +40,8 @@ public sealed class Api
         this.send = send;
         SyncRefs();
         Watch();
+        updater = new Updater(send);
+        _ = Task.Run(() => updater.Run(settings));
     }
 
     public string Title => branding.Name;
@@ -63,6 +66,7 @@ public sealed class Api
                 "/api/refs" => ApiResponse.Of(ImportRefs(json)),
                 "/api/open" => ApiResponse.Of(Open(json)),
                 "/api/resource" => ApiResponse.Of(InstallResource(json)),
+                "/api/restart" => ApiResponse.Of(Restart()),
                 _ => ApiResponse.NotFound,
             };
         }
@@ -112,7 +116,8 @@ public sealed class Api
         refs = Runner.HasRefs(settings.Out),
         resource = Directory.Exists(settings.ResourcePath) ? settings.ResourcePath : "",
         progress = Runner.Progress(),
-        version = typeof(Api).Assembly.GetName().Version?.ToString(3),
+        version = Updater.Current,
+        update = updater.Pending,
     };
 
     private object SaveSettings(JsonElement json)
@@ -131,6 +136,17 @@ public sealed class Api
         settings.Save();
         SyncRefs();
         return new { refs = Runner.HasRefs(settings.Out) };
+    }
+
+    private object Restart()
+    {
+        Runner.Stop();
+        onUi(() =>
+        {
+            Updater.Restart();
+            return "";
+        });
+        return new { };
     }
 
     private object InstallResource(JsonElement json)

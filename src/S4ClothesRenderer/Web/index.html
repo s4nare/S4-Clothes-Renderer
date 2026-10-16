@@ -39,7 +39,7 @@
     <div class="topbar">
         <div class="brand">
             <div class="brand-logo"><img id="logo" src="/logo" alt=""></div>
-            <div><div class="brand-name" id="brand-name">S4 Clothes Renderer</div><div class="brand-sub" data-i18n="app.sub"></div></div>
+            <div><div class="brand-name" id="brand-name">S4 Clothes Renderer</div><div class="brand-sub"><span data-i18n="app.sub"></span> <span id="version"></span></div></div>
         </div>
         <nav class="navbar">
             <button class="nav-link active" data-view="gallery"><svg class="i"><use href="#grid"/></svg><span data-i18n="nav.gallery"></span></button>
@@ -193,6 +193,15 @@ add_ace group.admin command.clothes_refs allow</code><button class="icon-btn" id
     <figure><img alt=""><figcaption><b></b><span></span></figcaption></figure>
     <button class="nav next" id="lb-next"><svg class="i"><use href="#right"/></svg></button>
     <button class="nav close" id="lb-close"><svg class="i"><use href="#x"/></svg></button>
+</div>
+
+<div class="modal" id="update">
+    <div class="modal-card">
+        <header><h3 id="upd-title"></h3><button class="icon-btn" id="upd-close"><svg class="i"><use href="#x"/></svg></button></header>
+        <div class="upd-state" id="upd-state"></div>
+        <div class="upd-notes" id="upd-notes"></div>
+        <footer><button class="btn" id="upd-later"></button><button class="btn primary" id="upd-go"></button></footer>
+    </div>
 </div>
 
 <div class="toasts" id="toasts"></div>

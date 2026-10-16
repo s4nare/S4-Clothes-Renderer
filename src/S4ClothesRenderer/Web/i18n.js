@@ -1,6 +1,10 @@
 const I18N = {
     fr: {
         'app.sub': 'Miniatures GTA V',
+        'upd.available': 'Mise à jour {version}', 'upd.installed': 'Nouveautés de la version {version}',
+        'upd.downloading': 'Téléchargement en cours…', 'upd.ready': 'Mise à jour installée : elle s’applique au redémarrage.',
+        'upd.manual': 'Installation automatique impossible : télécharge la nouvelle version.', 'upd.busy': 'Un rendu est en cours : redémarre une fois terminé.',
+        'upd.restart': 'Redémarrer maintenant', 'upd.later': 'Plus tard', 'upd.close': 'Fermer', 'upd.page': 'Télécharger',
         'nav.gallery': 'Galerie', 'nav.render': 'Rendu', 'nav.log': 'Journal',
         'sex.male': 'Homme', 'sex.female': 'Femme',
         'group.clothes': 'Vêtements', 'group.props': 'Props',
@@ -61,6 +65,10 @@ const I18N = {
     },
     en: {
         'app.sub': 'GTA V thumbnails',
+        'upd.available': 'Update {version}', 'upd.installed': 'What’s new in {version}',
+        'upd.downloading': 'Downloading…', 'upd.ready': 'Update installed: it applies on restart.',
+        'upd.manual': 'Automatic install failed: download the new version.', 'upd.busy': 'A render is running: restart once it is done.',
+        'upd.restart': 'Restart now', 'upd.later': 'Later', 'upd.close': 'Close', 'upd.page': 'Download',
         'nav.gallery': 'Gallery', 'nav.render': 'Render', 'nav.log': 'Log',
         'sex.male': 'Male', 'sex.female': 'Female',
         'group.clothes': 'Clothes', 'group.props': 'Props',

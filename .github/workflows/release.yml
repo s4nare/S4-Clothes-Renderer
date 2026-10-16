@@ -18,7 +18,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-      - run: dotnet publish src/S4ClothesRenderer/S4ClothesRenderer.csproj -c Release -o publish/S4ClothesRenderer
+      - shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_NAME -match '^v(\d+\.\d+\.\d+)$') { "-p:Version=$($Matches[1])" } else { "" }
+          dotnet publish src/S4ClothesRenderer/S4ClothesRenderer.csproj -c Release -o publish/S4ClothesRenderer $version
       - shell: pwsh
         run: |
           Copy-Item branding.example.json, README.md, LICENSE publish/S4ClothesRenderer
@@ -32,4 +35,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: S4ClothesRenderer.zip
-          generate_release_notes: true
+          body_path: release-notes.md

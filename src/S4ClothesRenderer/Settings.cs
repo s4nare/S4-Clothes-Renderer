@@ -14,6 +14,7 @@ public sealed class Settings
     public bool Force { get; set; }
     public string Lang { get; set; } = "";
     public string ResourcePath { get; set; } = "";
+    public string SeenVersion { get; set; } = "";
 
     public static readonly string Folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "S4ClothesRenderer");
     private static readonly string File = Path.Combine(Folder, "settings.json");
