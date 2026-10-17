@@ -7,7 +7,7 @@ public sealed record ObjectItem(string Kind, string Group, string Name, string M
 
 public static class Objects
 {
-    public static readonly string[] Kinds = ["vehicles", "weapons", "props", "peds", "emotes"];
+    public static readonly string[] Kinds = ["vehicles", "weapons", "props", "peds", "emotes", "face", "tattoos"];
     private static readonly string[] PedComponents = ["head", "berd", "hair", "uppr", "lowr", "hand", "feet", "teef", "accs", "task", "decl", "jbib"];
     private static readonly ushort[] FrontWheels = [27922, 26418];
     private static readonly ushort[] RearWheels = [29921, 29922, 29923, 27902, 5857, 5858, 5859, 26398];

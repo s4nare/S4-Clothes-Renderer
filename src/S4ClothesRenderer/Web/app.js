@@ -29,7 +29,7 @@ function options() {
 }
 
 const isObjects = () => state.kind !== 'clothes';
-const KINDS = ['clothes', 'vehicles', 'weapons', 'props', 'peds', 'emotes'];
+const KINDS = ['clothes', 'vehicles', 'weapons', 'props', 'peds', 'emotes', 'face', 'tattoos'];
 
 function grpLabel(kind, group) {
     const key = 'grp.' + kind + '.' + group;

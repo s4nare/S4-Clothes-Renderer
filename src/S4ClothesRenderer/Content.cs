@@ -43,6 +43,10 @@ public sealed class ContentIndex
                 else if (name == "gtxd.meta") Gtxds.Add(file);
                 else if (name.StartsWith("carcols")) CarCols.Add(file);
                 else if (name.StartsWith("carvariations")) CarVariations.Add(file);
+                else if (name == "facial_overlays.meta") Put(files, name, file, rank);
+                break;
+            case ".xml":
+                if (name.EndsWith("_overlays.xml")) Put(files, name, file, rank);
                 break;
             case ".ymt":
                 if (name.EndsWith("gtxd.ymt")) Gtxds.Add(file);

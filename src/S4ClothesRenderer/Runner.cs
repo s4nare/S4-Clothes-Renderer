@@ -155,7 +155,7 @@ public sealed class Runner
                 foreach (var file in Directory.EnumerateFiles(folders[i], "*.*", SearchOption.AllDirectories)) local.Add(Path.GetFileName(file), new FileRef(file), 10 + i);
             }
             var lib = new Library(local, game?.Index);
-            lastObjects = (key, lib, [.. Objects.Build(lib), .. Emotes.Catalog(lib, folders)]);
+            lastObjects = (key, lib, [.. Objects.Build(lib), .. Emotes.Catalog(lib, folders), .. Skin.Catalog(game, lib)]);
             return (lastObjects.Lib, lastObjects.Items);
         }
     }
@@ -202,7 +202,9 @@ public sealed class Runner
                 return paints.Select(p => new Job
                 {
                     Obj = i, Lib = lib, Size = size, Paint = p,
-                    Out = i.Kind == "emotes" ? Path.Combine(o.Out, i.Kind, i.Group, file + "." + format) : Path.Combine(o.Out, i.Kind, file + (variants ? "_" + p : "") + ".png"),
+                    Out = i.Kind == "emotes" ? Path.Combine(o.Out, i.Kind, i.Group, file + "." + format)
+                        : Skin.Kinds.Contains(i.Kind) ? Path.Combine(o.Out, i.Kind, i.Group, file + ".png")
+                        : Path.Combine(o.Out, i.Kind, file + (variants ? "_" + p : "") + ".png"),
                     Label = variants ? i.Name + "_" + p : i.Name, Source = i.Label != i.Name && i.Label != "" ? i.Label : i.Group,
                     Sort = (2, kindOrder, 0, i.Group + "\u0001" + i.Name.ToLowerInvariant(), Math.Max(p, 0), 'a'),
                 });
@@ -452,27 +454,34 @@ public sealed class Runner
                     }
                     else
                     {
-                        if (meshes == null)
-                        {
-                            meshes = LoadMeshes(job);
-                            placeholder = job.Obj == null && Renderer.IsPlaceholder(meshes);
-                            if (posed != null && !placeholder && !job.Comp.Prop) posed[job.Item.Sex]?.Apply(meshes);
-                        }
                         byte[] rgba = null;
-                        if (job.Obj != null)
+                        if (Skin.Kinds.Contains(job.Obj?.Kind))
                         {
-                            Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
-                            rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false, buffers);
+                            rgba = Skin.Render(game, job.Lib, job.Obj, job.Size, buffers);
                         }
                         else
                         {
-                            var head = o.Head && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
-                            if (!placeholder || head.Count > 0)
+                            if (meshes == null)
                             {
-                                tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), Math.Min(MaxTexture, job.Size * 2)) : null;
-                                rgba = head.Count > 0
-                                    ? Renderer.Render(placeholder ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false, buffers)
-                                    : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair", buffers);
+                                meshes = LoadMeshes(job);
+                                placeholder = job.Obj == null && Renderer.IsPlaceholder(meshes);
+                                if (posed != null && !placeholder && !job.Comp.Prop) posed[job.Item.Sex]?.Apply(meshes);
+                            }
+                            if (job.Obj != null)
+                            {
+                                Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
+                                rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false, buffers);
+                            }
+                            else
+                            {
+                                var head = o.Head && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
+                                if (!placeholder || head.Count > 0)
+                                {
+                                    tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), Math.Min(MaxTexture, job.Size * 2)) : null;
+                                    rgba = head.Count > 0
+                                        ? Renderer.Render(placeholder ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false, buffers)
+                                        : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair", buffers);
+                                }
                             }
                         }
                         if (rgba == null)

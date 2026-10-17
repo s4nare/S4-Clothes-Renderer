@@ -26,6 +26,9 @@ public sealed class Mesh
     public float[] PaintColor;
     public int[] Bones;
     public float[] Weights;
+    public float[] Uv1;
+    public Tex Decal;
+    public int DecalZone;
 
     public Mesh Copy()
     {
@@ -153,6 +156,7 @@ public static class Assets3D
         if (mesh.Tint != 0) (mesh.Palette, mesh.PaletteHash) = Sampler(geometry.Shader, mesh.Tint == 2 ? DiffusePalette : TintPaletteSampler, embedded);
         if (mesh.Palette == null && mesh.PaletteHash == 0) mesh.Tint = 0;
         if (mesh.Tint == 1) mesh.TintU = new float[count];
+        if (Has(7)) mesh.Uv1 = new float[count * 2];
         var skinned = transform == null && Has(1) && Has(2) && IsByte4(data.Info.GetComponentType(1)) && IsByte4(data.Info.GetComponentType(2));
         if (skinned)
         {
@@ -175,6 +179,11 @@ public static class Assets3D
             {
                 Read(data, i, 6, v);
                 mesh.Uvs[i * 2] = v[0]; mesh.Uvs[i * 2 + 1] = v[1];
+            }
+            if (mesh.Uv1 != null)
+            {
+                Read(data, i, 7, v);
+                mesh.Uv1[i * 2] = v[0]; mesh.Uv1[i * 2 + 1] = v[1];
             }
             if (mesh.TintU != null && Has(4))
             {

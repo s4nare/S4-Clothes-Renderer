@@ -18,16 +18,40 @@ public static class Renderer
         v -= MathF.Floor(v);
         int w = tex.Width, h = tex.Height;
         float x = u * (w - 1), y = v * (h - 1);
-        int x0 = (int)x, y0 = (int)y, x1 = Math.Min(w - 1, x0 + 1), y1 = Math.Min(h - 1, y0 + 1);
+        int x0 = (int)x, y0 = (int)y, x1 = x0 + 1 < w ? x0 + 1 : x0, y1 = y0 + 1 < h ? y0 + 1 : y0;
         float fx = x - x0, fy = y - y0;
+        float w00 = (1 - fx) * (1 - fy), w01 = fx * (1 - fy), w10 = (1 - fx) * fy, w11 = fx * fy;
         var d = tex.Rgba;
         int i00 = (y0 * w + x0) * 4, i01 = (y0 * w + x1) * 4, i10 = (y1 * w + x0) * 4, i11 = (y1 * w + x1) * 4;
-        for (var c = 0; c < 4; c++)
+        s[0] = d[i00] * w00 + d[i01] * w01 + d[i10] * w10 + d[i11] * w11;
+        s[1] = d[i00 + 1] * w00 + d[i01 + 1] * w01 + d[i10 + 1] * w10 + d[i11 + 1] * w11;
+        s[2] = d[i00 + 2] * w00 + d[i01 + 2] * w01 + d[i10 + 2] * w10 + d[i11 + 2] * w11;
+        s[3] = d[i00 + 3] * w00 + d[i01 + 3] * w01 + d[i10 + 3] * w10 + d[i11 + 3] * w11;
+    }
+
+    private static (float[] Points, float[] Normals, int Count) Project(Mesh m, Camera cam, int r, float cx, float cy, float scale, RenderBuffers buffers)
+    {
+        var positions = m.Positions;
+        var n = positions.Length / 3;
+        var sp = buffers.Points(n * 3);
+        for (var i = 0; i < n; i++)
         {
-            float a = d[i00 + c], b = d[i01 + c];
-            float e = d[i10 + c], f = d[i11 + c];
-            s[c] = (a * (1 - fx) + b * fx) * (1 - fy) + (e * (1 - fx) + f * fx) * fy;
+            var (sx, sy, sz) = cam.Project(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+            sp[i * 3] = (sx - cx) * scale + r / 2f;
+            sp[i * 3 + 1] = (sy - cy) * scale + r / 2f;
+            sp[i * 3 + 2] = sz;
         }
+        if (!m.HasNormals) return (sp, null, n);
+        var normals = m.Normals;
+        var np = buffers.Normals(n * 3);
+        for (var i = 0; i < n; i++)
+        {
+            var (nx, ny, nz) = cam.Project(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
+            np[i * 3] = nx;
+            np[i * 3 + 1] = ny;
+            np[i * 3 + 2] = nz;
+        }
+        return (sp, np, n);
     }
 
     private static void HairColor(Span<float> s)
@@ -86,6 +110,15 @@ public static class Renderer
     {
         var step = side / size;
         var taps = Math.Max(1, Math.Min(4, (int)MathF.Round(step)));
+        var xs = new int[size * taps];
+        var ys = new int[size * taps];
+        for (var i = 0; i < size * taps; i++)
+        {
+            var sx = (int)MathF.Floor(ox + (i / taps + (i % taps + 0.5f) / taps) * step);
+            var sy = (int)MathF.Floor(oy + (i / taps + (i % taps + 0.5f) / taps) * step);
+            xs[i] = sx < 0 || sx >= r ? -1 : sx;
+            ys[i] = sy < 0 || sy >= r ? -1 : sy;
+        }
         for (var y = 0; y < size; y++)
         {
             for (var x = 0; x < size; x++)
@@ -93,13 +126,16 @@ public static class Renderer
                 float cr = 0, cg = 0, cb = 0, ca = 0;
                 for (var ty = 0; ty < taps; ty++)
                 {
+                    var sy = ys[y * taps + ty];
+                    if (sy < 0) continue;
+                    var row = sy * r;
                     for (var tx = 0; tx < taps; tx++)
                     {
-                        var sx = (int)MathF.Floor(ox + (x + (tx + 0.5f) / taps) * step);
-                        var sy = (int)MathF.Floor(oy + (y + (ty + 0.5f) / taps) * step);
-                        if (sx < 0 || sy < 0 || sx >= r || sy >= r) continue;
-                        var i = (sy * r + sx) * 4;
+                        var sx = xs[x * taps + tx];
+                        if (sx < 0) continue;
+                        var i = (row + sx) * 4;
                         float al = color[i + 3];
+                        if (al == 0) continue;
                         cr += color[i] * al; cg += color[i + 1] * al; cb += color[i + 2] * al; ca += al;
                     }
                 }
@@ -132,7 +168,7 @@ public static class Renderer
         Edge(a0, c0, ref lo, ref hi);
         Edge(a1, c1, ref lo, ref hi);
         Edge(-(a0 + a1), 1 - c0 - c1, ref lo, ref hi);
-        return (Math.Max(x0, (int)MathF.Floor(lo - 0.5f) - 2), Math.Min(x1, (int)MathF.Ceiling(hi - 0.5f) + 2));
+        return (Math.Max(x0, (int)MathF.Floor(lo - 0.5f)), Math.Min(x1, (int)MathF.Ceiling(hi - 0.5f)));
     }
 
     private static void Edge(float a, float c, ref float lo, ref float hi)
@@ -147,8 +183,52 @@ public static class Renderer
         var depth = buffers.Depth;
         Array.Clear(color, 0, r * r * 4);
         Array.Fill(depth, float.NegativeInfinity, 0, r * r);
+        var mask = meshes.Any(m => m.Decal != null && m.Uv1 != null) ? buffers.Mask(r * r) : null;
+        if (mask != null) Array.Clear(mask, 0, r * r);
         int vx0 = r, vy0 = r, vx1 = -1, vy1 = -1;
         Span<float> s = stackalloc float[4];
+        Span<float> d = stackalloc float[4];
+        foreach (var m in meshes)
+        {
+            var mtex = m.Tex ?? tex;
+            if (m.Surface == Surface.Glass || (mtex != null && mtex.UseAlpha && m.AlphaTest)) continue;
+            var (sp, np, n) = Project(m, cam, r, cx, cy, scale, buffers);
+            var idx = m.Indices;
+            for (var t = 0; t + 2 < idx.Length; t += 3)
+            {
+                int a = idx[t], b = idx[t + 1], c = idx[t + 2];
+                if (a >= n || b >= n || c >= n) continue;
+                float ax = sp[a * 3], ay = sp[a * 3 + 1], bx = sp[b * 3], by = sp[b * 3 + 1], qx = sp[c * 3], qy = sp[c * 3 + 1];
+                var area = (bx - ax) * (qy - ay) - (by - ay) * (qx - ax);
+                if (MathF.Abs(area) < 1e-9f) continue;
+                var inv = 1 / area;
+                float za = sp[a * 3 + 2], zb = sp[b * 3 + 2], zc = sp[c * 3 + 2];
+                if (np != null && np[a * 3 + 2] + np[b * 3 + 2] + np[c * 3 + 2] > 0)
+                {
+                    za += FrontBias; zb += FrontBias; zc += FrontBias;
+                }
+                var x0 = Math.Max(0, (int)MathF.Floor(Math.Min(ax, Math.Min(bx, qx))));
+                var x1 = Math.Min(r - 1, (int)MathF.Ceiling(Math.Max(ax, Math.Max(bx, qx))));
+                var y0 = Math.Max(0, (int)MathF.Floor(Math.Min(ay, Math.Min(by, qy))));
+                var y1 = Math.Min(r - 1, (int)MathF.Ceiling(Math.Max(ay, Math.Max(by, qy))));
+                for (var y = y0; y <= y1; y++)
+                {
+                    var py = y + 0.5f;
+                    float ayp = (ay - py) * inv, byp = (by - py) * inv, qyp = (qy - py) * inv;
+                    float a0 = byp - qyp, c0 = bx * qyp - byp * qx, a1 = qyp - ayp, c1 = qx * ayp - qyp * ax;
+                    var (xs, xe) = RowSpan(x0, x1, a0, c0, a1, c1);
+                    float w0 = c0 + a0 * (xs + 0.5f), w1 = c1 + a1 * (xs + 0.5f);
+                    for (var x = xs; x <= xe; x++, w0 += a0, w1 += a1)
+                    {
+                        var w2 = 1 - w0 - w1;
+                        if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+                        var z = w0 * za + w1 * zb + w2 * zc;
+                        var pi = y * r + x;
+                        if (z > depth[pi]) depth[pi] = z;
+                    }
+                }
+            }
+        }
         for (var pass = 0; pass < 2; pass++)
         {
             foreach (var m in meshes)
@@ -156,26 +236,19 @@ public static class Renderer
                 var surface = m.Surface;
                 if ((surface == Surface.Glass) != (pass == 1)) continue;
                 var mtex = m.Tex ?? tex;
-                var positions = m.Positions;
-                var n = positions.Length / 3;
-                var sp = buffers.Points(n * 3);
-                for (var i = 0; i < n; i++)
-                {
-                    var (sx, sy, sz) = cam.Project(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-                    sp[i * 3] = (sx - cx) * scale + r / 2f;
-                    sp[i * 3 + 1] = (sy - cy) * scale + r / 2f;
-                    sp[i * 3 + 2] = sz;
-                }
+                var (sp, np, n) = Project(m, cam, r, cx, cy, scale, buffers);
                 var alphaTest = mtex != null && mtex.UseAlpha && m.AlphaTest;
                 var hairMesh = mtex != null && (hair || (m.Hair && mtex.HairEncoded));
                 var paint = m.PaintColor ?? Paint;
                 var uvs = m.Uvs;
-                var normals = m.Normals;
-                var hasNormals = m.HasNormals;
+                var hasNormals = np != null;
                 var palette = m.PaletteTex;
                 var tint = m.Tint;
                 var tintU = m.TintU;
                 var idx = m.Indices;
+                var uv1 = m.Uv1;
+                var decal = uv1 == null ? null : m.Decal;
+                var zone = m.DecalZone;
                 for (var t = 0; t + 2 < idx.Length; t += 3)
                 {
                     int a = idx[t], b = idx[t + 1], c = idx[t + 2];
@@ -185,7 +258,7 @@ public static class Renderer
                     if (MathF.Abs(area) < 1e-9f) continue;
                     var inv = 1 / area;
                     float za = sp[a * 3 + 2], zb = sp[b * 3 + 2], zc = sp[c * 3 + 2];
-                    if (hasNormals && cam.Project(normals[a * 3] + normals[b * 3] + normals[c * 3], normals[a * 3 + 1] + normals[b * 3 + 1] + normals[c * 3 + 1], normals[a * 3 + 2] + normals[b * 3 + 2] + normals[c * 3 + 2]).Z > 0)
+                    if (hasNormals && np[a * 3 + 2] + np[b * 3 + 2] + np[c * 3 + 2] > 0)
                     {
                         za += FrontBias; zb += FrontBias; zc += FrontBias;
                     }
@@ -197,18 +270,17 @@ public static class Renderer
                     {
                         var py = y + 0.5f;
                         float ayp = (ay - py) * inv, byp = (by - py) * inv, qyp = (qy - py) * inv;
-                        var (xs, xe) = RowSpan(x0, x1, byp - qyp, bx * qyp - byp * qx, qyp - ayp, qx * ayp - qyp * ax);
-                        for (var x = xs; x <= xe; x++)
+                        float a0 = byp - qyp, c0 = bx * qyp - byp * qx, a1 = qyp - ayp, c1 = qx * ayp - qyp * ax;
+                        var (xs, xe) = RowSpan(x0, x1, a0, c0, a1, c1);
+                        float w0 = c0 + a0 * (xs + 0.5f), w1 = c1 + a1 * (xs + 0.5f);
+                        for (var x = xs; x <= xe; x++, w0 += a0, w1 += a1)
                         {
-                            var px = x + 0.5f;
-                            var w0 = (bx - px) * qyp - byp * (qx - px);
-                            if (w0 < 0) continue;
-                            var w1 = (qx - px) * ayp - qyp * (ax - px);
                             var w2 = 1 - w0 - w1;
-                            if (w1 < 0 || w2 < 0) continue;
+                            if (w0 < 0 || w1 < 0 || w2 < 0) continue;
                             var z = w0 * za + w1 * zb + w2 * zc;
                             var pi = y * r + x;
-                            if (z <= depth[pi]) continue;
+                            if (z < depth[pi]) continue;
+                            var hit = false;
                             if (surface == Surface.Paint)
                             {
                                 s[0] = paint[0]; s[1] = paint[1]; s[2] = paint[2];
@@ -231,6 +303,22 @@ public static class Renderer
                                 }
                                 if (alphaTest && s[3] < 90) continue;
                                 if (hairMesh) HairColor(s);
+                                if (decal != null)
+                                {
+                                    var du = w0 * uv1[a * 2] + w1 * uv1[b * 2] + w2 * uv1[c * 2];
+                                    var dv = w0 * uv1[a * 2 + 1] + w1 * uv1[b * 2 + 1] + w2 * uv1[c * 2 + 1];
+                                    var tile = (int)MathF.Floor(dv);
+                                    if (du >= 1 && du < 2 && tile == -(zone * 2 + 1))
+                                    {
+                                        Sample(decal, du - 1, dv - tile, d);
+                                        var da = d[3] / 255;
+                                        if (da > 0.02f)
+                                        {
+                                            for (var k = 0; k < 3; k++) s[k] = s[k] * (1 - da) + d[k] * da;
+                                            hit = true;
+                                        }
+                                    }
+                                }
                             }
                             else
                             {
@@ -240,12 +328,11 @@ public static class Renderer
                             float fresnel = 0, spec = 0, env = 0;
                             if (hasNormals)
                             {
-                                var nx = w0 * normals[a * 3] + w1 * normals[b * 3] + w2 * normals[c * 3];
-                                var ny = w0 * normals[a * 3 + 1] + w1 * normals[b * 3 + 1] + w2 * normals[c * 3 + 1];
-                                var nz = w0 * normals[a * 3 + 2] + w1 * normals[b * 3 + 2] + w2 * normals[c * 3 + 2];
-                                var nl = MathF.Sqrt(nx * nx + ny * ny + nz * nz);
-                                if (nl == 0) nl = 1;
-                                var (vx, vy, vz) = cam.Project(nx / nl, ny / nl, nz / nl);
+                                var vx = w0 * np[a * 3] + w1 * np[b * 3] + w2 * np[c * 3];
+                                var vy = w0 * np[a * 3 + 1] + w1 * np[b * 3 + 1] + w2 * np[c * 3 + 1];
+                                var vz = w0 * np[a * 3 + 2] + w1 * np[b * 3 + 2] + w2 * np[c * 3 + 2];
+                                var nl = MathF.ReciprocalSqrtEstimate(Math.Max(1e-12f, vx * vx + vy * vy + vz * vz));
+                                vx *= nl; vy *= nl; vz *= nl;
                                 var lambert = MathF.Max(0, -vx * 0.25f - vy * 0.35f + vz * 0.9f);
                                 light = vz < -0.05f ? 0.45f : 0.62f + 0.42f * lambert;
                                 if (surface != Surface.Textured && vz > -0.05f)
@@ -274,6 +361,7 @@ public static class Renderer
                             else
                             {
                                 depth[pi] = z;
+                                if (mask != null) mask[pi] = hit ? (byte)1 : (byte)0;
                                 if (surface == Surface.Paint)
                                 {
                                     for (var k = 0; k < 3; k++) color[ci + k] = (byte)Math.Min(255, s[k] * light * (1 - 0.35f * fresnel) + env * (0.08f + 0.55f * fresnel) + spec * 205);
@@ -293,6 +381,11 @@ public static class Renderer
                 }
             }
         }
+        buffers.DecalPixels = 0;
+        if (mask != null)
+        {
+            for (var i = 0; i < r * r; i++) buffers.DecalPixels += mask[i];
+        }
         return (vx0, vy0, vx1, vy1);
     }
 }
@@ -301,8 +394,11 @@ public sealed class RenderBuffers
 {
     public byte[] Color = [];
     public float[] Depth = [];
+    public int DecalPixels;
     private float[] points = [];
     private byte[] frame = [];
+    private byte[] mask = [];
+    private float[] normals = [];
 
     public void Ensure(int pixels)
     {
@@ -312,6 +408,10 @@ public sealed class RenderBuffers
     }
 
     public float[] Points(int count) => points.Length >= count ? points : points = new float[count];
+
+    public byte[] Mask(int count) => mask.Length >= count ? mask : mask = new byte[count];
+
+    public float[] Normals(int count) => normals.Length >= count ? normals : normals = new float[count];
 
     public byte[] Frame(int length) => frame.Length == length ? frame : frame = new byte[length];
 }
