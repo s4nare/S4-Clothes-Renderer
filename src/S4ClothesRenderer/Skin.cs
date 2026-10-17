@@ -17,10 +17,13 @@ public static class Skin
         ("facialHair", "facial_hair"), ("eyebrow", "eyebrows"), ("blemishes", "blemishes"), ("aging", "ageing"), ("makeup", "makeup"),
         ("blusher", "blush"), ("baseDetail", "complexion"), ("damage", "sun_damage"), ("skinDetail1", "lipstick"), ("skinDetail2", "moles_freckles"),
     ];
-    private static readonly string[] HairGroups = ["facial_hair", "eyebrows"];
+    private static readonly string[] ShadeGroups = ["blemishes", "ageing", "complexion", "sun_damage", "moles_freckles"];
     private static readonly string[] FemaleGroups = ["makeup", "blush", "lipstick"];
     private static readonly string[] Zones = ["ZONE_TORSO", "ZONE_HEAD", "ZONE_LEFT_ARM", "ZONE_RIGHT_ARM", "ZONE_LEFT_LEG", "ZONE_RIGHT_LEG"];
-    private static readonly float[] HairTint = [38, 25, 17];
+    private static readonly Dictionary<string, float[]> Tints = new()
+    {
+        ["facial_hair"] = [38, 25, 17], ["eyebrows"] = [38, 25, 17], ["blush"] = [196, 84, 96], ["lipstick"] = [150, 32, 44],
+    };
     private static readonly Camera[] Views = [Camera.Toward(0, -1, 0), Camera.Toward(0, 1, 0), Camera.Toward(1, 0, 0), Camera.Toward(-1, 0, 0)];
     private static readonly ConcurrentDictionary<string, Tattoo> tattoos = new();
     private static readonly ConcurrentDictionary<string, List<(string Comp, Mesh Mesh)>> bodies = new();
@@ -85,7 +88,7 @@ public static class Skin
         if (head.Count == 0) throw new InvalidDataException("no head");
         var skin = head[0].Tex;
         var tex = new Tex { Width = skin.Width, Height = skin.Height, Rgba = (byte[])skin.Rgba.Clone(), UseAlpha = false };
-        var (ex0, ey0, ex1, ey1) = EyeRegion(head);
+        var (ex0, ey0, ex1, ey1) = EyeRegion(skin);
         if (item.Group == "eyes")
         {
             var atlas = Texture(lib, "mp_eye_colour", "mp_eye_colour");
@@ -96,7 +99,8 @@ public static class Skin
         else
         {
             var overlay = Texture(lib, item.Model, item.Model);
-            var tint = HairGroups.Contains(item.Group) ? HairTint : null;
+            var tint = Tints.GetValueOrDefault(item.Group);
+            var shade = ShadeGroups.Contains(item.Group);
             for (var y = 0; y < tex.Height; y++)
             {
                 var oy = Math.Min(overlay.Height - 1, y * overlay.Height / tex.Height);
@@ -106,7 +110,7 @@ public static class Skin
                     var a = overlay.Rgba[o + 3] / 255f;
                     if (a <= 0) continue;
                     var p = (y * tex.Width + x) * 4;
-                    for (var k = 0; k < 3; k++) tex.Rgba[p + k] = (byte)(tex.Rgba[p + k] * (1 - a) + (tint?[k] ?? overlay.Rgba[o + k]) * a);
+                    for (var k = 0; k < 3; k++) tex.Rgba[p + k] = shade ? (byte)Math.Min(255, tex.Rgba[p + k] * (1 - a + a * overlay.Rgba[o + k] / 128f)) : (byte)(tex.Rgba[p + k] * (1 - a) + (tint?[k] ?? overlay.Rgba[o + k]) * a);
                 }
             }
         }
@@ -129,19 +133,20 @@ public static class Skin
         return Renderer.RenderFixed(meshes, cam, size, (minX + maxX) / 2, (minY + maxY) / 2, (maxX - minX) * 1.15f, buffers);
     }
 
-    private static (float, float, float, float) EyeRegion(List<Mesh> head)
+    private static (float, float, float, float) EyeRegion(Tex skin)
     {
-        float x0 = 1, y0 = 1, x1 = 0, y1 = 0;
-        foreach (var m in head)
+        int w = skin.Width, h = skin.Height, x0 = w, y0 = h, x1 = 0, y1 = 0;
+        var bg = ((int)(h * 0.74f) * w + (int)(w * 0.74f)) * 4;
+        for (var y = (int)(h * 0.7f); y < h; y++)
         {
-            for (var i = 0; i < m.Uvs.Length; i += 2)
+            for (var x = (int)(w * 0.7f); x < w; x++)
             {
-                float u = m.Uvs[i], v = m.Uvs[i + 1];
-                if (u < 0.7f || v < 0.7f || u > 1 || v > 1) continue;
-                x0 = Math.Min(x0, u); y0 = Math.Min(y0, v); x1 = Math.Max(x1, u); y1 = Math.Max(y1, v);
+                var p = (y * w + x) * 4;
+                if (Math.Abs(skin.Rgba[p] - skin.Rgba[bg]) + Math.Abs(skin.Rgba[p + 1] - skin.Rgba[bg + 1]) + Math.Abs(skin.Rgba[p + 2] - skin.Rgba[bg + 2]) <= 60) continue;
+                x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y);
             }
         }
-        return x1 > x0 ? (x0, y0, x1, y1) : (0.78f, 0.78f, 1, 1);
+        return x1 > x0 ? ((float)x0 / w, (float)y0 / h, (x1 + 1f) / w, (y1 + 1f) / h) : (0.78f, 0.78f, 0.98f, 0.98f);
     }
 
     private static void Paste(Tex dst, Tex src, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh)
