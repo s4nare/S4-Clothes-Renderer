@@ -31,6 +31,7 @@ public sealed class JobOptions
     public bool Force { get; set; }
     public bool Head { get; set; }
     public string Pose { get; set; } = "files";
+    public string Format { get; set; } = "gif";
     public List<string> Sexes { get; set; } = [];
     public List<string> Cats { get; set; } = [];
     public string Sex { get; set; } = "";
@@ -154,7 +155,7 @@ public sealed class Runner
                 foreach (var file in Directory.EnumerateFiles(folders[i], "*.*", SearchOption.AllDirectories)) local.Add(Path.GetFileName(file), new FileRef(file), 10 + i);
             }
             var lib = new Library(local, game?.Index);
-            lastObjects = (key, lib, Objects.Build(lib));
+            lastObjects = (key, lib, [.. Objects.Build(lib), .. Emotes.Catalog(lib, folders)]);
             return (lastObjects.Lib, lastObjects.Items);
         }
     }
@@ -190,6 +191,7 @@ public sealed class Runner
         var (lib, items) = ObjectsFor(o.UseGame, o.Folders);
         var size = Sizes.Contains(o.Size) ? o.Size : 512;
         var kindOrder = Array.IndexOf(Objects.Kinds, o.Kind);
+        var format = Emotes.Formats.Contains(o.Format) ? o.Format : "gif";
         return [.. items.Where(i => i.Kind == o.Kind && o.Groups.Contains(i.Group))
             .SelectMany(i =>
             {
@@ -200,7 +202,7 @@ public sealed class Runner
                 return paints.Select(p => new Job
                 {
                     Obj = i, Lib = lib, Size = size, Paint = p,
-                    Out = Path.Combine(o.Out, i.Kind, file + (variants ? "_" + p : "") + ".png"),
+                    Out = i.Kind == "emotes" ? Path.Combine(o.Out, i.Kind, i.Group, file + "." + format) : Path.Combine(o.Out, i.Kind, file + (variants ? "_" + p : "") + ".png"),
                     Label = variants ? i.Name + "_" + p : i.Name, Source = i.Label != i.Name && i.Label != "" ? i.Label : i.Group,
                     Sort = (2, kindOrder, 0, i.Group + "\u0001" + i.Name.ToLowerInvariant(), Math.Max(p, 0), 'a'),
                 });
@@ -406,9 +408,28 @@ public sealed class Runner
     private void Execute(RunState run, List<Job> todo, JobOptions o)
     {
         var lastProgress = Stopwatch.StartNew();
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, o.Kind == "emotes" ? Environment.ProcessorCount / 2 : Environment.ProcessorCount - 1) };
         var posed = o.Kind == "clothes" && o.Pose == "down" ? new[] { "male", "female" }.ToDictionary(s => s, ArmsDown) : null;
         if (posed != null && posed.Values.Any(r => r == null)) send("log", new { key = "pose_unavailable" });
+        var game = Game;
+        var format = Emotes.Formats.Contains(o.Format) ? o.Format : "gif";
+        string ffmpeg = null;
+        if (todo.Any(j => j.Obj?.Kind == "emotes"))
+        {
+            try
+            {
+                ffmpeg = Emotes.Ffmpeg((done, total) =>
+                {
+                    run.Current = $"ffmpeg {done} / {total} MB";
+                    send("progress", Progress());
+                });
+            }
+            catch (Exception e)
+            {
+                send("log", new { key = "failed", label = "ffmpeg", message = e.Message });
+            }
+        }
+        send("progress", Progress());
         var groups = Partitioner.Create(todo.GroupBy(j => (object)j.Item ?? j.Obj).ToList(), EnumerablePartitionerOptions.NoBuffering);
         Parallel.ForEach(groups, options, () => new RenderBuffers(), (group, state, buffers) =>
         {
@@ -424,37 +445,44 @@ public sealed class Runner
                 run.Current = job.Label;
                 try
                 {
-                    if (meshes == null)
-                    {
-                        meshes = LoadMeshes(job);
-                        placeholder = job.Obj == null && Renderer.IsPlaceholder(meshes);
-                        if (posed != null && !placeholder && !job.Comp.Prop) posed[job.Item.Sex]?.Apply(meshes);
-                    }
                     Tex tex = null;
-                    byte[] rgba = null;
-                    if (job.Obj != null)
+                    if (job.Obj?.Kind == "emotes")
                     {
-                        Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
-                        rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false, buffers);
+                        Emotes.Capture(game, ffmpeg, job.Lib, job.Obj, job.Out, job.Size, format);
                     }
                     else
                     {
-                        var head = o.Head && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
-                        if (!placeholder || head.Count > 0)
+                        if (meshes == null)
                         {
-                            tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), Math.Min(MaxTexture, job.Size * 2)) : null;
-                            rgba = head.Count > 0
-                                ? Renderer.Render(placeholder ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false, buffers)
-                                : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair", buffers);
+                            meshes = LoadMeshes(job);
+                            placeholder = job.Obj == null && Renderer.IsPlaceholder(meshes);
+                            if (posed != null && !placeholder && !job.Comp.Prop) posed[job.Item.Sex]?.Apply(meshes);
                         }
+                        byte[] rgba = null;
+                        if (job.Obj != null)
+                        {
+                            Objects.Paint(meshes, job.Lib, job.Obj.Model, job.Paint);
+                            rgba = Renderer.Render(meshes, null, Objects.CameraFor(job.Obj.Kind), job.Size, false, buffers);
+                        }
+                        else
+                        {
+                            var head = o.Head && job.Comp.Key == "hair" ? Head(job.Item.Sex) : [];
+                            if (!placeholder || head.Count > 0)
+                            {
+                                tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), Math.Min(MaxTexture, job.Size * 2)) : null;
+                                rgba = head.Count > 0
+                                    ? Renderer.Render(placeholder ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false, buffers)
+                                    : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair", buffers);
+                            }
+                        }
+                        if (rgba == null)
+                        {
+                            rgba = new byte[job.Size * job.Size * 4];
+                            Interlocked.Increment(ref run.Empty);
+                        }
+                        Directory.CreateDirectory(Path.GetDirectoryName(job.Out));
+                        File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));
                     }
-                    if (rgba == null)
-                    {
-                        rgba = new byte[job.Size * job.Size * 4];
-                        Interlocked.Increment(ref run.Empty);
-                    }
-                    Directory.CreateDirectory(Path.GetDirectoryName(job.Out));
-                    File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));
                     Interlocked.Increment(ref run.Done);
                     if (job.Obj == null && !placeholder && tex == null) Interlocked.Increment(ref run.NoTexture);
                     send("image", new { url = ImageUrl(job.Out), @out = job.Out, label = job.Label, source = job.Source, seq = job.Seq, sex = job.Item?.Sex, comp = job.Item?.Comp, kind = job.Obj?.Kind ?? "clothes", group = job.Obj?.Group });

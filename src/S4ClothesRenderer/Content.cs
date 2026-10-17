@@ -27,6 +27,7 @@ public sealed class ContentIndex
             case ".ydr":
             case ".ydd":
             case ".yft":
+            case ".ycd":
                 Put(files, name, file, rank);
                 break;
             case ".ytd":

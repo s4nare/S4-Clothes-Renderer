@@ -12,7 +12,7 @@ const state = {
     sex: 'male', cat: 'jbib', filter: 'all', items: [], refs: false,
     useGame: true, gamePath: '', game: null,
     kind: 'clothes', objCounts: null, groups: null, groupByKind: {}, groupsPicked: {},
-    opts: { colors: 'first', naming: 'cat', size: '512', force: 'false', head: 'false', pose: 'down' },
+    opts: { colors: 'first', naming: 'cat', size: '512', force: 'false', head: 'false', pose: 'down', format: 'gif' },
 };
 
 const ui = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -23,13 +23,13 @@ function options() {
         sexes: [...document.querySelectorAll('[name=sex]:checked')].map((e) => e.value),
         cats: [...document.querySelectorAll('[name=pick]:checked')].map((e) => e.value),
         colors: state.opts.colors, naming: state.opts.naming, size: +state.opts.size, force: state.opts.force === 'true',
-        head: state.opts.head === 'true', pose: state.opts.pose,
+        head: state.opts.head === 'true', pose: state.opts.pose, format: state.opts.format,
         kind: state.kind, groups: [...document.querySelectorAll('[name=group]:checked')].map((e) => e.value),
     };
 }
 
 const isObjects = () => state.kind !== 'clothes';
-const KINDS = ['clothes', 'vehicles', 'weapons', 'props', 'peds'];
+const KINDS = ['clothes', 'vehicles', 'weapons', 'props', 'peds', 'emotes'];
 
 function grpLabel(kind, group) {
     const key = 'grp.' + kind + '.' + group;
@@ -48,6 +48,7 @@ function kindGroups() {
 function renderKinds() {
     document.body.classList.toggle('objects', isObjects());
     document.body.classList.toggle('vehicles', state.kind === 'vehicles');
+    document.body.classList.toggle('emotes', state.kind === 'emotes');
     document.querySelectorAll('[data-kinds]').forEach((box) => {
         box.innerHTML = '';
         box.classList.remove('open');
@@ -104,7 +105,7 @@ function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => api('/api/settings', {
         useGame: state.useGame, gamePath: state.gamePath, folders: state.folders, out: o.out,
-        naming: o.naming, colors: o.colors, size: o.size, force: o.force, head: o.head, pose: o.pose, lang: LANG,
+        naming: o.naming, colors: o.colors, size: o.size, force: o.force, head: o.head, pose: o.pose, format: o.format, lang: LANG,
     }).then((r) => setRefs(!!r.refs)), 200);
 }
 
@@ -235,7 +236,13 @@ function fillTile(tile, item) {
     tile.querySelector('b').textContent = item.label;
     tile.querySelector('.meta span').textContent = item.source;
     tile.title = item.source;
-    if (item.url) {
+    if (item.url && /\.(mp4|mov)$/i.test(item.out)) {
+        tile.className = 'tile';
+        tile.querySelector('.pic').innerHTML = '<video autoplay loop muted playsinline></video>';
+        tile.querySelector('video').src = item.url;
+        delete tile.dataset.url;
+        tile.onclick = () => api('/api/open', { path: item.out });
+    } else if (item.url) {
         tile.querySelector('.pic').innerHTML = '<img alt="" loading="lazy">';
         tile.querySelector('img').src = item.url;
         tile.dataset.url = item.url;
@@ -567,7 +574,7 @@ document.querySelectorAll('[data-option]').forEach((group) => group.querySelecto
     setSegment(group, b.dataset.value);
     save();
     renderEstimate();
-    if (group.dataset.option === 'colors' || group.dataset.option === 'naming') { loadSummary(); loadCategory(); }
+    if (['colors', 'naming', 'format'].includes(group.dataset.option)) { loadSummary(); loadCategory(); }
 }));
 document.querySelectorAll('[data-all]').forEach((a) => a.onclick = () => {
     document.querySelectorAll(isObjects() ? '[name=group]' : '[name=pick]').forEach((b) => { b.checked = a.dataset.all === '1'; });
@@ -770,7 +777,7 @@ fetch('/api/state').then((r) => r.json()).then((st) => {
     state.gamePath = s.gamePath || '';
     state.game = st.game;
     $('out').value = s.out || '';
-    state.opts = { colors: s.colors, naming: s.naming, size: String(s.size), force: String(s.force), head: String(s.head), pose: s.pose };
+    state.opts = { colors: s.colors, naming: s.naming, size: String(s.size), force: String(s.force), head: String(s.head), pose: s.pose, format: s.format };
     if (ui) {
         state.sex = ui.sex || 'male';
         state.cat = ui.cat || 'jbib';

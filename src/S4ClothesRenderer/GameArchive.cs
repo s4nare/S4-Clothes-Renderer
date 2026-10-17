@@ -109,6 +109,14 @@ public sealed class FileRef
         return ydr;
     }
 
+    public YcdFile LoadClips()
+    {
+        var ycd = new YcdFile();
+        if (Entry != null) ycd.Load(Entry.File.ExtractFile(Entry), Entry);
+        else ycd.Load(File.ReadAllBytes(Path), null);
+        return ycd;
+    }
+
     public YtdFile LoadTextures()
     {
         var ytd = new YtdFile();

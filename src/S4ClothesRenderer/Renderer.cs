@@ -59,7 +59,6 @@ public static class Renderer
         if (!(span > 0)) span = 1;
         var scale = r * 0.9f / span;
         float cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-        var color = buffers.Color;
         var (bx0, by0, bx1, by1) = Raster(meshes, tex, cam, hair, r, cx, cy, scale, buffers);
         var visibleSide = Math.Max(bx1 - bx0 + 1, by1 - by0 + 1);
         if (bx1 >= 0 && visibleSide < r * 0.5f)
@@ -72,7 +71,19 @@ public static class Renderer
         var side = Math.Max(16, Math.Max(bx1 - bx0 + 1, by1 - by0 + 1) / 0.9f);
         var ox = (bx0 + bx1 + 1) / 2f - side / 2;
         var oy = (by0 + by1 + 1) / 2f - side / 2;
-        var output = new byte[size * size * 4];
+        return Downsample(buffers.Color, r, ox, oy, side, size, new byte[size * size * 4]);
+    }
+
+    public static byte[] RenderFixed(List<Mesh> meshes, Camera cam, int size, float cx, float cy, float span, RenderBuffers buffers)
+    {
+        var r = size * Supersample;
+        buffers.Ensure(r * r);
+        Raster(meshes, null, cam, false, r, cx, cy, r / span, buffers);
+        return Downsample(buffers.Color, r, 0, 0, r, size, buffers.Frame(size * size * 4));
+    }
+
+    private static byte[] Downsample(byte[] color, int r, float ox, float oy, float side, int size, byte[] output)
+    {
         var step = side / size;
         var taps = Math.Max(1, Math.Min(4, (int)MathF.Round(step)));
         for (var y = 0; y < size; y++)
@@ -98,6 +109,10 @@ public static class Renderer
                     output[o] = (byte)Math.Min(255, cr / ca);
                     output[o + 1] = (byte)Math.Min(255, cg / ca);
                     output[o + 2] = (byte)Math.Min(255, cb / ca);
+                }
+                else
+                {
+                    output[o] = output[o + 1] = output[o + 2] = 0;
                 }
                 output[o + 3] = (byte)(ca / (taps * taps));
             }
@@ -287,6 +302,7 @@ public sealed class RenderBuffers
     public byte[] Color = [];
     public float[] Depth = [];
     private float[] points = [];
+    private byte[] frame = [];
 
     public void Ensure(int pixels)
     {
@@ -296,6 +312,8 @@ public sealed class RenderBuffers
     }
 
     public float[] Points(int count) => points.Length >= count ? points : points = new float[count];
+
+    public byte[] Frame(int length) => frame.Length == length ? frame : frame = new byte[length];
 }
 
 public readonly struct Camera

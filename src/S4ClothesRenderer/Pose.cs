@@ -43,6 +43,36 @@ public sealed class Rig
         return new Rig(skin);
     }
 
+    public static Rig Animated(Skeleton skeleton, (Animation Animation, float Time)[] layers)
+    {
+        var bones = skeleton.Bones.Items;
+        var translations = bones.Select(b => b.Translation).ToArray();
+        var rotations = bones.Select(b => b.Rotation).ToArray();
+        var byTag = new Dictionary<ushort, int>();
+        for (var i = 0; i < bones.Length; i++) byTag.TryAdd(bones[i].Tag, i);
+        foreach (var (animation, time) in layers)
+        {
+            var frame = animation.GetFramePosition(time);
+            var ids = animation.BoneIds.data_items;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                if (!byTag.TryGetValue(ids[i].BoneId, out var b)) continue;
+                if (ids[i].Track == 0) translations[b] = (Vector3)animation.EvaluateVector4(frame, i, true);
+                else if (ids[i].Track == 1) rotations[b] = animation.EvaluateQuaternion(frame, i, true);
+            }
+        }
+        var world = new Matrix[bones.Length];
+        var skin = new Matrix[bones.Length];
+        for (var i = 0; i < bones.Length; i++)
+        {
+            var local = Matrix.RotationQuaternion(rotations[i]) * Matrix.Translation(translations[i]);
+            var parent = bones[i].ParentIndex;
+            world[i] = parent >= 0 ? local * world[parent] : local;
+            skin[i] = bones[i].BindTransformInv * world[i];
+        }
+        return new Rig(skin);
+    }
+
     private static Matrix Toward(Vector3 pivot, Vector3 axis, float degrees, Vector3 point, Vector3 direction)
     {
         var angle = degrees * MathF.PI / 180;

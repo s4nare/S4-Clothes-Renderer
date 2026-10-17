@@ -19,6 +19,11 @@ public sealed class Api
         [".woff2"] = "font/woff2", [".png"] = "image/png", [".svg"] = "image/svg+xml",
     };
 
+    private static readonly Dictionary<string, string> Media = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".png"] = "image/png", [".gif"] = "image/gif", [".webp"] = "image/webp", [".mp4"] = "video/mp4", [".mov"] = "video/quicktime",
+    };
+
     private readonly Branding branding = Branding.Load();
     private readonly Settings settings = Settings.Load();
     private readonly Func<Func<string>, string> onUi;
@@ -102,8 +107,8 @@ public sealed class Api
                 return ApiResponse.Bytes(branding.LogoBytes(), "image/png");
             case "/img":
                 var file = Path.GetFullPath(HttpUtility.ParseQueryString(query ?? "")["f"] ?? "");
-                if (!file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || !File.Exists(file)) return ApiResponse.NotFound;
-                return new ApiResponse(200, "image/png", new MemoryStream(File.ReadAllBytes(file)));
+                if (!Media.TryGetValue(Path.GetExtension(file), out var media) || !File.Exists(file)) return ApiResponse.NotFound;
+                return new ApiResponse(200, media, new MemoryStream(File.ReadAllBytes(file)));
         }
         var name = path.TrimStart('/');
         return Types.TryGetValue(Path.GetExtension(name), out var type) ? ApiResponse.Bytes(Embedded.Read("web/" + name), type) : ApiResponse.NotFound;
@@ -138,6 +143,7 @@ public sealed class Api
         settings.Force = next.Force;
         settings.Head = next.Head;
         settings.Pose = next.Pose == "down" ? "down" : "files";
+        settings.Format = Emotes.Formats.Contains(next.Format) ? next.Format : "gif";
         settings.Lang = next.Lang ?? "";
         settings.Save();
         SyncRefs();

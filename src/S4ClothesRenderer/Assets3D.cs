@@ -26,6 +26,14 @@ public sealed class Mesh
     public float[] PaintColor;
     public int[] Bones;
     public float[] Weights;
+
+    public Mesh Copy()
+    {
+        var m = (Mesh)MemberwiseClone();
+        m.Positions = (float[])Positions.Clone();
+        m.Normals = (float[])Normals.Clone();
+        return m;
+    }
 }
 
 public enum Surface
