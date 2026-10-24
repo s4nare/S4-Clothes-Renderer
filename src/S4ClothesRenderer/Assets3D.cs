@@ -29,6 +29,18 @@ public sealed class Mesh
     public float[] Uv1;
     public Tex Decal;
     public int DecalZone;
+    public string Livery;
+    public CwTexture LiveryEmbedded;
+    public Tex LiveryTex;
+    public uint Bump;
+    public CwTexture BumpEmbedded;
+    public Tex BumpTex;
+    public float Bumpiness;
+    public uint Spec;
+    public CwTexture SpecEmbedded;
+    public Tex SpecTex;
+    public float SpecIntensity;
+    public float SpecPower;
 
     public Mesh Copy()
     {
@@ -80,6 +92,12 @@ public static class Assets3D
     private const uint DiffuseSampler = 4059966321;
     private const uint TintPaletteSampler = 4131954791;
     private static readonly uint DiffusePalette = JenkHash.GenHash("texturesamplerdiffpal");
+    private static readonly uint BumpSampler = JenkHash.GenHash("bumpsampler");
+    private static readonly uint SpecSampler = JenkHash.GenHash("specsampler");
+    private static readonly uint BumpinessParam = JenkHash.GenHash("bumpiness");
+    private static readonly uint SpecIntensityParam = JenkHash.GenHash("specularintensitymult");
+    private static readonly uint SpecFalloffParam = JenkHash.GenHash("specularfalloffmult");
+    private const int MapSize = 1024;
 
     private static (CwTexture Texture, uint Hash) Sampler(ShaderFX shader, uint sampler, TextureDictionary embedded)
     {
@@ -97,6 +115,28 @@ public static class Assets3D
         return (null, 0);
     }
 
+    private static float Param(ShaderFX shader, uint name, float fallback)
+    {
+        var parameters = shader?.ParametersList;
+        if (parameters?.Hashes == null || parameters.Parameters == null) return fallback;
+        for (var i = 0; i < parameters.Hashes.Length && i < parameters.Parameters.Length; i++)
+        {
+            if ((uint)parameters.Hashes[i] == name && parameters.Parameters[i].Data is Vector4 v) return v.X;
+        }
+        return fallback;
+    }
+
+    private static (CwTexture Texture, string Name) LiverySampler(ShaderFX shader, TextureDictionary embedded)
+    {
+        foreach (var p in shader?.ParametersList?.Parameters ?? [])
+        {
+            if (p.Data is not TextureBase texture || texture.Name == null || !texture.Name.Contains("sign_", StringComparison.OrdinalIgnoreCase)) continue;
+            var name = texture.Name.ToLowerInvariant();
+            return (texture is CwTexture t && t.Data?.FullData != null ? t : embedded?.Lookup(JenkHash.GenHash(name)), name);
+        }
+        return (null, null);
+    }
+
     private static HashSet<uint> Hashes(params string[] names) =>
         [.. names.SelectMany(n => new[] { JenkHash.GenHash(n), JenkHash.GenHash(n + ".sps") })];
 
@@ -106,6 +146,13 @@ public static class Assets3D
     {
         var meshes = new List<Mesh>();
         foreach (var drawable in ydd.Drawables ?? ydd.DrawableDict?.Drawables?.data_items ?? []) AddDrawable(meshes, drawable, null, false);
+        var maps = new Dictionary<CwTexture, Tex>();
+        Tex Map(CwTexture texture) => texture == null ? null : maps.TryGetValue(texture, out var tex) ? tex : maps[texture] = Decode(texture, MapSize);
+        foreach (var m in meshes)
+        {
+            m.BumpTex = Map(m.BumpEmbedded);
+            m.SpecTex = Map(m.SpecEmbedded);
+        }
         return meshes;
     }
 
@@ -151,6 +198,12 @@ public static class Assets3D
         };
         mesh.PaintSlot = Is(SecondaryPaintShaders, geometry.Shader) ? 2 : 1;
         (mesh.Embedded, mesh.Diffuse) = Sampler(geometry.Shader, DiffuseSampler, embedded);
+        if (mesh.Surface == Surface.Paint) (mesh.LiveryEmbedded, mesh.Livery) = LiverySampler(geometry.Shader, embedded);
+        (mesh.BumpEmbedded, mesh.Bump) = Sampler(geometry.Shader, BumpSampler, embedded);
+        (mesh.SpecEmbedded, mesh.Spec) = Sampler(geometry.Shader, SpecSampler, embedded);
+        mesh.Bumpiness = Param(geometry.Shader, BumpinessParam, 1);
+        mesh.SpecIntensity = Param(geometry.Shader, SpecIntensityParam, 0.3f);
+        mesh.SpecPower = Param(geometry.Shader, SpecFalloffParam, 64);
         var fileHash = geometry.Shader?.FileName.Hash ?? 0;
         mesh.Tint = fileHash is 3267631682 or 14185869 ? 1 : fileHash is 231364109 or 3294641629 or 731050667 ? 2 : 0;
         if (mesh.Tint != 0) (mesh.Palette, mesh.PaletteHash) = Sampler(geometry.Shader, mesh.Tint == 2 ? DiffusePalette : TintPaletteSampler, embedded);

@@ -72,6 +72,8 @@ public static class Objects
         {
             case "vehicles":
                 AddFragment(meshes, (lib.Get(item.Model + "_hi.yft") ?? lib.Get(item.Model + ".yft")).LoadFragment().Fragment);
+                var livery = lib.LiveryMod(item.Model);
+                if (livery != null) AddFragment(meshes, lib.Get(livery + ".yft").LoadFragment().Fragment);
                 txds.AddRange([item.Model + "+hi", item.Txd, item.Model]);
                 break;
             case "peds":

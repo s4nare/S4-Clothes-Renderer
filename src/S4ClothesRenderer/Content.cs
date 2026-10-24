@@ -84,6 +84,8 @@ public sealed class Library
     public List<WeaponDef> Weapons { get; } = [];
     public uint[] PaintColors { get; private set; } = [];
     public Dictionary<string, List<(byte Primary, byte Secondary)>> PaintCombos { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, List<string>> VehicleKits { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> LiveryMods { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Library(params ContentIndex[] indexesByPriority)
     {
@@ -93,8 +95,16 @@ public sealed class Library
             foreach (var file in index.Gtxds) ReadGtxd(file);
             foreach (var file in index.VehicleMetas) ReadVehicles(file);
             foreach (var file in index.WeaponMetas) ReadWeapons(file);
-            foreach (var file in index.CarCols) ReadCarCols(file);
-            foreach (var file in index.CarVariations) ReadCarVariations(file);
+            foreach (var file in index.CarCols)
+            {
+                ReadCarCols(file);
+                ReadLiveryMods(file);
+            }
+            foreach (var file in index.CarVariations)
+            {
+                ReadCarVariations(file);
+                ReadKits(file);
+            }
         }
         DedupeByModel(Vehicles, v => v.Model);
         DedupeByModel(Weapons, w => w.Name);
@@ -196,6 +206,29 @@ public sealed class Library
         {
         }
     }
+
+    private void ReadLiveryMods(FileRef file)
+    {
+        foreach (var kit in Xml(file)?.Root?.Element("Kits")?.Elements("Item") ?? [])
+        {
+            var name = Value(kit, "kitName");
+            var livery = kit.Element("visibleMods")?.Elements("Item").FirstOrDefault(m => Value(m, "type") == "VMT_LIVERY_MOD");
+            if (name != "" && livery != null && Value(livery, "modelName") != "") LiveryMods[name] = Value(livery, "modelName").ToLowerInvariant();
+        }
+    }
+
+    private void ReadKits(FileRef file)
+    {
+        foreach (var v in Xml(file)?.Root?.Element("variationData")?.Elements("Item") ?? [])
+        {
+            var model = Value(v, "modelName");
+            var kits = v.Element("kits")?.Elements("Item").Select(k => k.Value.Trim()).Where(k => k != "").ToList();
+            if (model != "" && kits?.Count > 0) VehicleKits[model] = kits;
+        }
+    }
+
+    public string LiveryMod(string model) =>
+        VehicleKits.GetValueOrDefault(model)?.Select(k => LiveryMods.GetValueOrDefault(k)).FirstOrDefault(m => m != null && Get(m + ".yft") != null);
 
     private void ReadCarVariations(FileRef file)
     {
@@ -328,6 +361,9 @@ public sealed class Library
         foreach (var mesh in meshes)
         {
             if (mesh.Tint != 0) mesh.PaletteTex = Decode(Find(mesh.Palette, mesh.PaletteHash));
+            if (mesh.Livery != null) mesh.LiveryTex = Decode(Find(mesh.LiveryEmbedded, JenkHash.GenHash(mesh.Livery)));
+            mesh.BumpTex = Decode(Find(mesh.BumpEmbedded, mesh.Bump));
+            mesh.SpecTex = Decode(Find(mesh.SpecEmbedded, mesh.Spec));
             if (mesh.Tex != null || mesh.Surface == Surface.Glass) continue;
             mesh.Tex = Decode(Find(mesh.Embedded, mesh.Diffuse));
         }
