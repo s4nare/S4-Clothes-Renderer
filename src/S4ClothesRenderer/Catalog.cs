@@ -49,6 +49,8 @@ public static class Catalog
     public static List<ClothingItem> Build(IEnumerable<List<(string FullName, FileRef File)>> roots)
     {
         var items = new Dictionary<string, ClothingItem>();
+        var all = new Dictionary<string, SortedDictionary<char, FileRef>>();
+        var perRoot = new List<(List<(string FullName, FileRef File)> Files, Dictionary<string, SortedDictionary<char, FileRef>> Textures)>();
         foreach (var files in roots)
         {
             var textures = new Dictionary<string, SortedDictionary<char, FileRef>>();
@@ -58,7 +60,13 @@ public static class Catalog
                 if (!m.Success) continue;
                 if (!textures.TryGetValue(m.Groups[1].Value, out var colors)) textures[m.Groups[1].Value] = colors = [];
                 colors.TryAdd(m.Groups[2].Value[0], file);
+                if (!all.TryGetValue(m.Groups[1].Value, out var shared)) all[m.Groups[1].Value] = shared = [];
+                shared[m.Groups[2].Value[0]] = file;
             }
+            perRoot.Add((files, textures));
+        }
+        foreach (var (files, textures) in perRoot)
+        {
             var models = files.Where(f => f.FullName.EndsWith(".ydd", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(f => Universal.IsMatch(f.FullName) ? 0 : 1).ToList();
             var seen = new HashSet<string>();
@@ -74,7 +82,7 @@ public static class Catalog
                 var key = $"{SexOf[model]}/{comp}/{collection}/{m.Groups[5].Value}";
                 if (!seen.Add(key)) continue;
                 var texKey = (m.Groups[1].Value + m.Groups[2].Value + (m.Groups[3].Success ? "_" + m.Groups[3].Value : "") + "^" + m.Groups[4].Value + "_diff_" + m.Groups[5].Value).ToLowerInvariant();
-                var colors = textures.TryGetValue(texKey, out var found) ? found.Select(c => new ColorVariant(c.Key, c.Value)).ToList() : [];
+                var colors = textures.TryGetValue(texKey, out var found) || all.TryGetValue(texKey, out found) ? found.Select(c => new ColorVariant(c.Key, c.Value)).ToList() : [];
                 items[key] = new ClothingItem
                 {
                     Sex = SexOf[model], Comp = comp, Collection = collection, Model = model, PropSuffix = propSuffix,

@@ -169,11 +169,32 @@ public sealed class Runner
     public object Scan(JobOptions o)
     {
         var counts = new Dictionary<string, Dictionary<string, int[]>> { ["male"] = [], ["female"] = [] };
-        foreach (var it in Items(o.UseGame, o.Folders))
+        o.Kind = "clothes";
+        o.Sexes = ["male", "female"];
+        o.Cats = [.. Component.All.Select(c => c.Key)];
+        o.Colors = "first";
+        var models = BuildJobs(o).Jobs;
+        o.Colors = "all";
+        var variants = BuildJobs(o).Jobs;
+        if (models != null)
         {
-            if (!counts[it.Sex].TryGetValue(it.Comp, out var c)) counts[it.Sex][it.Comp] = c = new int[2];
-            c[0]++;
-            c[1] += Math.Max(1, it.Colors.Count);
+            foreach (var (jobs, slot) in new[] { (models, 0), (variants, 1) })
+            {
+                foreach (var j in jobs)
+                {
+                    if (!counts[j.Item.Sex].TryGetValue(j.Item.Comp, out var c)) counts[j.Item.Sex][j.Item.Comp] = c = new int[2];
+                    c[slot]++;
+                }
+            }
+        }
+        else
+        {
+            foreach (var it in Items(o.UseGame, o.Folders))
+            {
+                if (!counts[it.Sex].TryGetValue(it.Comp, out var c)) counts[it.Sex][it.Comp] = c = new int[2];
+                c[0]++;
+                c[1] += Math.Max(1, it.Colors.Count);
+            }
         }
         var objects = Objects.Kinds.ToDictionary(k => k, _ => new SortedDictionary<string, int>());
         var paints = new SortedDictionary<string, int>();
@@ -478,6 +499,7 @@ public sealed class Runner
                                 if (!placeholder || head.Count > 0)
                                 {
                                     tex = job.Texture != null ? Assets3D.ReadTexture(job.Texture.LoadTextures(), Math.Min(MaxTexture, job.Size * 2)) : null;
+                                    if (tex == null) foreach (var m in meshes) m.Tex ??= Assets3D.Decode(m.Embedded, Math.Min(MaxTexture, job.Size * 2));
                                     rgba = head.Count > 0
                                         ? Renderer.Render(placeholder ? head : [.. head, .. meshes], tex, Camera.Toward(0.35f, -1, 0.05f), job.Size, false, buffers)
                                         : Renderer.Render(meshes, tex, Camera.Of(job.Comp.View), job.Size, job.Comp.Key == "hair", buffers);
@@ -493,7 +515,7 @@ public sealed class Runner
                         File.WriteAllBytes(job.Out, Png.Encode(rgba, job.Size, job.Size));
                     }
                     Interlocked.Increment(ref run.Done);
-                    if (job.Obj == null && !placeholder && tex == null) Interlocked.Increment(ref run.NoTexture);
+                    if (job.Obj == null && !placeholder && tex == null && meshes.All(m => m.Tex == null)) Interlocked.Increment(ref run.NoTexture);
                     send("image", new { url = ImageUrl(job.Out), @out = job.Out, label = job.Label, source = job.Source, seq = job.Seq, sex = job.Item?.Sex, comp = job.Item?.Comp, kind = job.Obj?.Kind ?? "clothes", group = job.Obj?.Group });
                 }
                 catch (Exception e)

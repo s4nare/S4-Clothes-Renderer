@@ -317,11 +317,25 @@ public static class Assets3D
     public static Tex Decode(CwTexture texture, int maxSize)
     {
         if (texture?.Data?.FullData == null) return null;
-        var mip = 0;
-        while (mip + 1 < texture.Levels && Math.Max(texture.Width >> mip, texture.Height >> mip) > maxSize) mip++;
-        var width = Math.Max(1, texture.Width >> mip);
-        var height = Math.Max(1, texture.Height >> mip);
-        var rgba = texture.Format == TextureFormat.D3DFMT_BC7 ? Bc7.Decode(texture, mip, width, height) : FromBgra(CodeWalker.Utils.DDSIO.GetPixels(texture, mip));
+        byte[] rgba;
+        int width, height;
+        while (true)
+        {
+            var mip = 0;
+            while (mip + 1 < texture.Levels && Math.Max(texture.Width >> mip, texture.Height >> mip) > maxSize) mip++;
+            width = Math.Max(1, texture.Width >> mip);
+            height = Math.Max(1, texture.Height >> mip);
+            try
+            {
+                rgba = texture.Format == TextureFormat.D3DFMT_BC7 ? Bc7.Decode(texture, mip, width, height) : FromBgra(CodeWalker.Utils.DDSIO.GetPixels(texture, mip));
+                break;
+            }
+            catch
+            {
+                if (texture.Levels <= 1) return null;
+                texture.Levels--;
+            }
+        }
         if (rgba == null || rgba.Length < width * height * 4) return null;
         if (texture.Format == TextureFormat.D3DFMT_A8)
         {

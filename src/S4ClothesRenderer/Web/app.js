@@ -574,7 +574,8 @@ document.querySelectorAll('[data-option]').forEach((group) => group.querySelecto
     setSegment(group, b.dataset.value);
     save();
     renderEstimate();
-    if (['colors', 'naming', 'format'].includes(group.dataset.option)) { loadSummary(); loadCategory(); }
+    if (group.dataset.option === 'naming') scan();
+    else if (['colors', 'format'].includes(group.dataset.option)) { loadSummary(); loadCategory(); }
 }));
 document.querySelectorAll('[data-all]').forEach((a) => a.onclick = () => {
     document.querySelectorAll(isObjects() ? '[name=group]' : '[name=pick]').forEach((b) => { b.checked = a.dataset.all === '1'; });
@@ -628,8 +629,7 @@ $('refs-import').onclick = () => api('/api/pick', { kind: 'refs', initial: $('ou
         if (x.error) return toast(errorText(x.error), 'err');
         setRefs(!!x.refs);
         toast(t('refs.imported'), 'ok');
-        loadSummary();
-        loadCategory();
+        scan();
     });
 });
 $('res-install').onclick = () => {
@@ -751,8 +751,7 @@ const handlers = {
     refs: () => {
         setRefs(true);
         toast(t('refs.imported'), 'ok');
-        loadSummary();
-        loadCategory();
+        scan();
     },
     game: (g) => {
         const wasLoaded = state.game && state.game.loaded;
