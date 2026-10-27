@@ -294,14 +294,12 @@ public sealed class Runner
                     unknown++;
                 }
             }
-            if (o.Naming == "game" && index == null) continue;
             var colors = it.Colors.Count == 0 ? [new ColorVariant('a', null)] : o.Colors == "all" ? it.Colors : [it.Colors[0]];
             foreach (var color in colors)
             {
                 var suffix = o.Colors == "all" ? "_" + (color.Letter - 'a') : "";
-                var folder = Path.Combine(it.Sex, comp.Folder);
-                var rel = o.Naming == "game" ? Path.Combine(it.Sex, comp.Slot, index + suffix + ".png")
-                    : index != null ? Path.Combine(folder, index + suffix + ".png")
+                var folder = Path.Combine(it.Sex, o.Naming == "game" ? comp.Slot : comp.Folder);
+                var rel = index != null ? Path.Combine(folder, index + suffix + ".png")
                     : Path.Combine(folder, it.Collection == "" ? "base" : it.Collection, it.Name + "_" + color.Letter + ".png");
                 jobs[rel] = new Job
                 {
@@ -380,7 +378,7 @@ public sealed class Runner
         var todo = o.Force ? jobs : jobs.Where(j => !File.Exists(j.Out)).ToList();
         for (var i = 0; i < todo.Count; i++) todo[i].Seq = i;
         var run = Run = new RunState { Total = todo.Count, Skipped = jobs.Count - todo.Count };
-        if (unknown > 0) send("log", new { key = o.Naming == "game" ? "unknown_skipped" : "unknown_sorted", n = unknown });
+        if (unknown > 0) send("log", new { key = "unknown_sorted", n = unknown });
         Task.Run(() => Execute(run, todo, o));
         return new { total = todo.Count, skipped = run.Skipped };
     }
